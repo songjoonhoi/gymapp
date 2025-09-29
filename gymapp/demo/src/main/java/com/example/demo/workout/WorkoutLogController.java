@@ -27,6 +27,21 @@ public class WorkoutLogController {
         return service.create(memberId, new WorkoutLogRequest(title, content, media));
     }
 
+    // 수정 (title/content 변경, media 교체 가능)
+    @PutMapping("/{logId}")
+    public WorkoutLogResponse update(@PathVariable Long logId,
+                                     @RequestParam String title,
+                                     @RequestParam String content,
+                                     @RequestParam(required = false) MultipartFile media) {
+        return service.update(logId, new WorkoutLogRequest(title, content, media));
+    }
+
+    // 삭제 (엔티티 + 미디어 파일 함께 삭제)
+    @DeleteMapping("/{logId}")
+    public void delete(@PathVariable Long logId) {
+        service.delete(logId);
+    }
+
     // 회원별 목록
     @GetMapping("/{memberId}")
     public List<WorkoutLogResponse> listByMember(@PathVariable Long memberId) {

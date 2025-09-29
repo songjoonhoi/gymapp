@@ -17,7 +17,12 @@ public class S3FileStorage implements FileStorage {
     @Override
     public String save(MultipartFile file) throws IOException {
         // 👉 뼈대 코드: 아직 실제 업로드는 구현하지 않음
-        // 나중에 AWS SDK 연동 시 여기서 s3Client.putObject() 사용
         throw new UnsupportedOperationException("S3 업로드는 아직 구현되지 않았습니다.");
+    }
+
+    @Override
+    public void delete(String path) throws IOException {
+        // 👉 뼈대 코드: 아직 실제 삭제는 구현하지 않음
+        throw new UnsupportedOperationException("S3 삭제는 아직 구현되지 않았습니다.");
     }
 }

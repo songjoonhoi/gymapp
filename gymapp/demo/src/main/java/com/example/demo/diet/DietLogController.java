@@ -27,6 +27,19 @@ public class DietLogController {
         return service.create(memberId, new DietLogRequest(title, content, media));
     }
 
+    @PutMapping("/{logId}")
+    public DietLogResponse update(@PathVariable Long logId,
+                                  @RequestParam String title,
+                                  @RequestParam String content,
+                                  @RequestParam(required = false) MultipartFile media) {
+        return service.update(logId, new DietLogRequest(title, content, media));
+    }
+
+    @DeleteMapping("/{logId}")
+    public void delete(@PathVariable Long logId) {
+        service.delete(logId);
+    }
+
     // 회원별 목록
     @GetMapping("/{memberId}")
     public List<DietLogResponse> listByMember(@PathVariable Long memberId) {

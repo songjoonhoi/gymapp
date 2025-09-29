@@ -51,4 +51,11 @@ public class LocalFileStorage implements FileStorage {
         // 접근 URL 반환
         return "/media/" + newName;
     }
+
+     @Override
+    public void delete(String path) throws IOException {
+        Path target = uploadDir.resolve(path).normalize();
+        Files.deleteIfExists(target);
+    }
+
 }

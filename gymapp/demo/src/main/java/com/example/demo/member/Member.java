@@ -26,6 +26,9 @@ public class Member extends BaseEntity {
     @Column(nullable = false, length = 120, unique = true)
     private String email;
 
+    @Column(nullable = false)
+    private String password; // BCrypt로 해시 저장
+
     @Column(length = 20)
     private String phone;
 

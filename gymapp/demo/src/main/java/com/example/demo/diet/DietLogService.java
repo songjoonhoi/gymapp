@@ -55,6 +55,40 @@ public class DietLogService {
         return toRes(log);
     }
 
+    public DietLogResponse update(Long logId, DietLogRequest req) {
+        DietLog log = logRepo.findById(logId)
+                .orElseThrow(() -> new EntityNotFoundException("식단일지 없음: " + logId));
+
+        log.setTitle(req.title());
+        log.setContent(req.content());
+
+        MultipartFile newMedia = req.media();
+        if (newMedia != null && !newMedia.isEmpty()) {
+            try {
+                fileStorage.delete(log.getMediaUrl());
+                String newUrl = fileStorage.save(newMedia);
+                log.setMediaUrl(newUrl);
+                String ct = newMedia.getContentType();
+                log.setMediaType((ct != null && ct.startsWith("video")) ? "VIDEO" : "IMAGE");
+            } catch (IOException e) {
+                throw new RuntimeException("파일 교체 실패", e);
+            }
+        }
+
+        return toRes(log);
+    }
+
+    public void delete(Long logId) {
+        DietLog log = logRepo.findById(logId)
+                .orElseThrow(() -> new EntityNotFoundException("식단일지 없음: " + logId));
+        try {
+            fileStorage.delete(log.getMediaUrl());
+        } catch (IOException e) {
+            // 파일 삭제 실패해도 DB 삭제는 진행
+        }
+        logRepo.delete(log);
+    }
+
     @Transactional(readOnly = true)
     public List<DietLogResponse> listByMember(Long memberId) {
         return logRepo.findByMemberId(memberId).stream()
