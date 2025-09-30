@@ -5,11 +5,13 @@ import io.jsonwebtoken.security.Keys;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
 import java.util.Date;
+import java.util.List;
 import java.util.Map;
 
 @Component
@@ -39,11 +41,18 @@ public class JwtTokenProvider {
 
     public Authentication getAuthentication(String token) {
         Jws<Claims> jws = Jwts.parserBuilder().setSigningKey(key).build().parseClaimsJws(token);
+
+        Long id = jws.getBody().get("id", Long.class);
         String email = jws.getBody().getSubject();
-        String role  = (String) jws.getBody().get("role");
-        var principal = new org.springframework.security.core.userdetails.User(
-                email, "", java.util.List.of(new org.springframework.security.core.authority.SimpleGrantedAuthority("ROLE_" + role))
+        String role = jws.getBody().get("role", String.class);
+
+        UserPrincipal principal = new UserPrincipal(
+                id,
+                email,
+                role,
+                List.of(new SimpleGrantedAuthority("ROLE_" + role))
         );
+
         return new UsernamePasswordAuthenticationToken(principal, token, principal.getAuthorities());
     }
 

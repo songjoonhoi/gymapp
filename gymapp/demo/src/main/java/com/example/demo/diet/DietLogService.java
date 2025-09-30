@@ -1,19 +1,24 @@
 package com.example.demo.diet;
 
+import com.example.demo.auth.UserPrincipal;
+import com.example.demo.diet.dto.DietLogRequest;
+import com.example.demo.diet.dto.DietLogResponse;
 import com.example.demo.member.Member;
 import com.example.demo.member.MemberRepository;
 import com.example.demo.storage.FileStorage;
-import com.example.demo.diet.dto.DietLogRequest;
-import com.example.demo.diet.dto.DietLogResponse;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
@@ -25,6 +30,7 @@ public class DietLogService {
     private final MemberRepository memberRepo;
     private final FileStorage fileStorage;
 
+    // ✅ 생성
     public DietLogResponse create(Long memberId, DietLogRequest req) {
         Member member = memberRepo.findById(memberId)
                 .orElseThrow(() -> new EntityNotFoundException("회원 없음: " + memberId));
@@ -34,13 +40,9 @@ public class DietLogService {
         MultipartFile file = req.media();
 
         if (file != null && !file.isEmpty()) {
-            try {
-                mediaUrl = fileStorage.save(file);
-                String contentType = file.getContentType();
-                mediaType = (contentType != null && contentType.startsWith("video")) ? "VIDEO" : "IMAGE";
-            } catch (IOException e) {
-                throw new RuntimeException("파일 저장 실패", e);
-            }
+            mediaUrl = fileStorage.save(file);
+            String contentType = file.getContentType();
+            mediaType = (contentType != null && contentType.startsWith("video")) ? "VIDEO" : "IMAGE";
         }
 
         DietLog log = DietLog.builder()
@@ -55,36 +57,36 @@ public class DietLogService {
         return toRes(log);
     }
 
+    // ✅ 수정 (본인만 가능)
     public DietLogResponse update(Long logId, DietLogRequest req) {
         DietLog log = logRepo.findById(logId)
                 .orElseThrow(() -> new EntityNotFoundException("식단일지 없음: " + logId));
 
+        checkOwner(log.getMember().getId()); // 본인 확인
+
         log.setTitle(req.title());
         log.setContent(req.content());
 
-        MultipartFile newMedia = req.media();
-        if (newMedia != null && !newMedia.isEmpty()) {
-            try {
+        if (req.media() != null && !req.media().isEmpty()) {
+            if (log.getMediaUrl() != null) {
                 fileStorage.delete(log.getMediaUrl());
-                String newUrl = fileStorage.save(newMedia);
-                log.setMediaUrl(newUrl);
-                String ct = newMedia.getContentType();
-                log.setMediaType((ct != null && ct.startsWith("video")) ? "VIDEO" : "IMAGE");
-            } catch (IOException e) {
-                throw new RuntimeException("파일 교체 실패", e);
             }
+            log.setMediaUrl(fileStorage.save(req.media())); // ✅ try/catch 제거
+            log.setMediaType(getMediaType(req.media()));
         }
 
         return toRes(log);
     }
 
+    // ✅ 삭제 (본인만 가능)
     public void delete(Long logId) {
         DietLog log = logRepo.findById(logId)
                 .orElseThrow(() -> new EntityNotFoundException("식단일지 없음: " + logId));
-        try {
+
+        checkOwner(log.getMember().getId()); // 본인 확인
+
+        if (log.getMediaUrl() != null) {
             fileStorage.delete(log.getMediaUrl());
-        } catch (IOException e) {
-            // 파일 삭제 실패해도 DB 삭제는 진행
         }
         logRepo.delete(log);
     }
@@ -116,4 +118,34 @@ public class DietLogService {
                 log.getCreatedAt()
         );
     }
+
+    private String getMediaType(MultipartFile file) {
+        String contentType = file.getContentType();
+        return (contentType != null && contentType.startsWith("video")) ? "VIDEO" : "IMAGE";
+    }
+
+    // 🔒 본인 확인 로직
+    private void checkOwner(Long ownerId) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || !(auth.getPrincipal() instanceof com.example.demo.auth.UserPrincipal user)) {
+            throw new AccessDeniedException("인증이 필요합니다.");
+        }
+        if (!user.getId().equals(ownerId)) {
+            throw new AccessDeniedException("본인만 수정/삭제할 수 있습니다.");
+        }
+    }
+
+    @Transactional(readOnly = true)
+public Page<DietLogResponse> search(
+        String keyword,
+        Long memberId,
+        LocalDateTime fromDate,
+        LocalDateTime toDate,
+        String mediaType,
+        Pageable pageable
+) {
+    return logRepo.search(keyword, memberId, fromDate, toDate, mediaType, pageable)
+            .map(this::toRes);
+}
+
 }

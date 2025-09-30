@@ -8,20 +8,23 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequiredArgsConstructor
 @RequestMapping("/api/auth")
+@RequiredArgsConstructor
 public class AuthController {
 
-    private final AuthService service;
+    private final AuthService authService;
 
+    // ✅ 회원가입
     @PostMapping("/register")
-    public ResponseEntity<Void> register(@RequestBody RegisterRequest req){
-        service.register(req);
-        return ResponseEntity.ok().build();
+    public ResponseEntity<String> register(@RequestBody RegisterRequest req) {
+        authService.register(req);
+        return ResponseEntity.ok("회원가입 완료");
     }
 
+    // ✅ 로그인
     @PostMapping("/login")
-    public ResponseEntity<AuthResponse> login(@RequestBody AuthRequest req){
-        return ResponseEntity.ok(service.login(req));
+    public ResponseEntity<AuthResponse> login(@RequestBody AuthRequest req) {
+        AuthResponse res = authService.login(req);
+        return ResponseEntity.ok(res);
     }
 }

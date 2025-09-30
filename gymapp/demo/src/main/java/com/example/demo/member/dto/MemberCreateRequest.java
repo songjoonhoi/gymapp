@@ -8,8 +8,6 @@ public record MemberCreateRequest(
     @NotBlank String name,
     @Email @NotBlank String email,
     String phone,
-    Role role) {
-
-    
-    
-}
+    @NotBlank String password, // ✅ 비밀번호 필드 추가
+    Role role
+) {}
