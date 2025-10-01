@@ -39,6 +39,8 @@ public class DietLogService {
 
     // ✅ 생성
     public DietLogResponse create(Long memberId, DietLogRequest req) {
+        checkPermission(memberId); // 🔒 생성 권한 확인
+
         Member member = memberRepo.findById(memberId)
                 .orElseThrow(() -> new EntityNotFoundException("회원 없음: " + memberId));
 
@@ -52,7 +54,7 @@ public class DietLogService {
             mediaType = (contentType != null && contentType.startsWith("video")) ? "VIDEO" : "IMAGE";
         }
 
-        // ✅ AI 분석 (칼로리만 저장)
+        // ✅ AI 분석
         Integer calories = null;
         String aiCalories = null;
         String aiNutrition = null;
@@ -75,15 +77,14 @@ public class DietLogService {
                 .content(req.content())
                 .mediaUrl(mediaUrl)
                 .mediaType(mediaType)
-                .calories(calories)   // ✅ DB 저장
+                .calories(calories)
                 .build();
 
         logRepo.save(log);
 
-        // 🔔 알림 추가
+        // 🔔 알림
         notiService.create(memberId, NotificationType.SUCCESS, "식단 기록이 작성되었습니다!");
 
-        // ✅ AI 결과 포함한 응답
         return new DietLogResponse(
                 log.getId(),
                 log.getMember().getId(),
@@ -98,12 +99,12 @@ public class DietLogService {
         );
     }
 
-    // ✅ 수정 (본인 + 관리자)
+    // ✅ 수정
     public DietLogResponse update(Long logId, DietLogRequest req) {
         DietLog log = logRepo.findById(logId)
                 .orElseThrow(() -> new EntityNotFoundException("식단일지 없음: " + logId));
 
-        checkOwner(log.getMember().getId()); // 🔒 권한 확인
+        checkPermission(log.getMember().getId()); // 🔒 수정 권한 확인
 
         log.setTitle(req.title());
         log.setContent(req.content());
@@ -120,12 +121,12 @@ public class DietLogService {
         return toRes(log);
     }
 
-    // ✅ 삭제 (본인 + 관리자)
+    // ✅ 삭제
     public void delete(Long logId) {
         DietLog log = logRepo.findById(logId)
                 .orElseThrow(() -> new EntityNotFoundException("식단일지 없음: " + logId));
 
-        checkOwner(log.getMember().getId()); // 🔒 권한 확인
+        checkPermission(log.getMember().getId()); // 🔒 삭제 권한 확인
 
         if (log.getMediaUrl() != null) {
             fileStorage.delete(log.getMediaUrl());
@@ -135,23 +136,67 @@ public class DietLogService {
         notiService.create(log.getMember().getId(), NotificationType.WARNING, "식단 기록이 삭제되었습니다.");
     }
 
-    // ✅ 회원별 조회 (회원 본인 + 담당 트레이너 + 관리자)
+    // ✅ 회원별 조회
     @Transactional(readOnly = true)
     public List<DietLogResponse> listByMember(Long memberId) {
-        checkViewPermission(memberId); // 🔒 조회 권한 확인
+        checkPermission(memberId); // 🔒 조회 권한 확인
         return logRepo.findByMemberId(memberId).stream()
                 .map(this::toRes)
                 .toList();
     }
 
-    // ✅ 전체 조회 (관리자만)
+    // ✅ 전체 조회 (관리자 전용)
     @Transactional(readOnly = true)
     public Page<DietLogResponse> findAll(Pageable pageable) {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        if (auth == null || !(auth.getPrincipal() instanceof UserPrincipal user) || !user.getRoleEnum().isAdmin()) {
-            throw new AccessDeniedException("관리자만 전체 조회가 가능합니다.");
+        UserPrincipal user = getCurrentUser();
+        if (!user.isAdmin()) {
+            throw new AccessDeniedException("관리자만 전체 로그를 볼 수 있습니다.");
         }
         return logRepo.findAll(pageable).map(this::toRes);
+    }
+
+    // ✅ 검색/필터링 (조회 권한 적용)
+    @Transactional(readOnly = true)
+    public Page<DietLogResponse> search(
+            String keyword,
+            Long memberId,
+            LocalDateTime fromDate,
+            LocalDateTime toDate,
+            String mediaType,
+            Pageable pageable
+    ) {
+        if (memberId != null) {
+            checkPermission(memberId); // 🔒 권한 체크 추가
+        }
+        return logRepo.search(keyword, memberId, fromDate, toDate, mediaType, pageable)
+                .map(this::toRes);
+    }
+
+    // ========================
+    // 🔒 권한 체크 헬퍼
+    // ========================
+    private void checkPermission(Long ownerId) {
+        UserPrincipal user = getCurrentUser();
+
+        if (user.isAdmin()) return; // 전체 접근 가능
+        if (user.isTrainer()) {
+            Member member = memberRepo.findById(ownerId)
+                    .orElseThrow(() -> new EntityNotFoundException("회원 없음: " + ownerId));
+            if (member.getTrainer() != null && member.getTrainer().getId().equals(user.getId())) {
+                return; // 담당 트레이너라면 허용
+            }
+        }
+        if (user.getId().equals(ownerId)) return; // 본인 허용
+
+        throw new AccessDeniedException("해당 회원의 로그에 접근할 수 없습니다.");
+    }
+
+    private UserPrincipal getCurrentUser() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || !(auth.getPrincipal() instanceof UserPrincipal user)) {
+            throw new AccessDeniedException("인증이 필요합니다.");
+        }
+        return user;
     }
 
     private DietLogResponse toRes(DietLog log) {
@@ -178,83 +223,29 @@ public class DietLogService {
         return (contentType != null && contentType.startsWith("video")) ? "VIDEO" : "IMAGE";
     }
 
-    // 🔒 본인 확인 (수정/삭제 전용)
-    private void checkOwner(Long ownerId) {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        if (auth == null || !(auth.getPrincipal() instanceof UserPrincipal user)) {
-            throw new AccessDeniedException("인증이 필요합니다.");
-        }
-        if (user.getRoleEnum().isAdmin()) {
-            return;
-        }
-        if (!user.getId().equals(ownerId)) {
-            throw new AccessDeniedException("본인만 수정/삭제할 수 있습니다.");
-        }
-    }
-
-    // 🔒 조회 권한 확인 (회원 본인 + 담당 트레이너 + 관리자)
-    private void checkViewPermission(Long memberId) {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        if (auth == null || !(auth.getPrincipal() instanceof UserPrincipal user)) {
-            throw new AccessDeniedException("인증이 필요합니다.");
-        }
-
-        if (user.getRoleEnum().isAdmin()) {
-            return;
-        }
-        if (user.getId().equals(memberId)) {
-            return;
-        }
-        if (user.getRoleEnum().isTrainer()) {
-            Member member = memberRepo.findById(memberId)
-                    .orElseThrow(() -> new EntityNotFoundException("회원 없음: " + memberId));
-            if (member.getTrainer() != null && member.getTrainer().getId().equals(user.getId())) {
-                return;
-            }
-        }
-        throw new AccessDeniedException("조회 권한이 없습니다.");
-    }
-
-    // ✅ 검색/필터링 (조회 권한 적용)
-    @Transactional(readOnly = true)
-    public Page<DietLogResponse> search(
-            String keyword,
-            Long memberId,
-            LocalDateTime fromDate,
-            LocalDateTime toDate,
-            String mediaType,
-            Pageable pageable
-    ) {
-        if (memberId != null) {
-            checkViewPermission(memberId);
-        }
-        return logRepo.search(keyword, memberId, fromDate, toDate, mediaType, pageable)
-                .map(this::toRes);
-    }
-
-    // ✅ 총 칼로리/기간별 칼로리 조회 (조회 권한 적용)
+    // ✅ 칼로리 합계 관련 메서드
     @Transactional(readOnly = true)
     public int getTotalCalories(Long memberId) {
-        checkViewPermission(memberId);
+        checkPermission(memberId);
         return logRepo.findTotalCalories(memberId);
     }
 
     @Transactional(readOnly = true)
     public int getCaloriesForPeriod(Long memberId, LocalDateTime start, LocalDateTime end) {
-        checkViewPermission(memberId);
+        checkPermission(memberId);
         return logRepo.findCaloriesBetween(memberId, start, end);
     }
 
     @Transactional(readOnly = true)
     public int getCaloriesToday(Long memberId) {
-        checkViewPermission(memberId);
+        checkPermission(memberId);
         LocalDate today = LocalDate.now();
         return logRepo.findCaloriesBetween(memberId, today.atStartOfDay(), today.atTime(LocalTime.MAX));
     }
 
     @Transactional(readOnly = true)
     public int getCaloriesThisWeek(Long memberId) {
-        checkViewPermission(memberId);
+        checkPermission(memberId);
         LocalDate today = LocalDate.now();
         LocalDate startOfWeek = today.with(java.time.DayOfWeek.MONDAY);
         LocalDate endOfWeek = today.with(java.time.DayOfWeek.SUNDAY);
@@ -263,7 +254,7 @@ public class DietLogService {
 
     @Transactional(readOnly = true)
     public int getCaloriesThisMonth(Long memberId) {
-        checkViewPermission(memberId);
+        checkPermission(memberId);
         LocalDate today = LocalDate.now();
         LocalDate firstDay = today.withDayOfMonth(1);
         LocalDate lastDay = today.withDayOfMonth(today.lengthOfMonth());
