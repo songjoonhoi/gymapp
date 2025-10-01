@@ -1,5 +1,6 @@
 package com.example.demo.member;
 
+import com.example.demo.auth.UserPrincipal;
 import com.example.demo.common.enums.Role;
 import com.example.demo.common.enums.UserStatus;
 import com.example.demo.member.dto.MemberCreateRequest;
@@ -10,6 +11,7 @@ import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -34,7 +36,7 @@ public class MemberService {
                 .name(req.name())
                 .email(req.email())
                 .phone(req.phone())
-                .password(passwordEncoder.encode(req.password())) // ✅ 해시 저장
+                .password(passwordEncoder.encode(req.password()))
                 .role(req.role() == null ? Role.OT : req.role())
                 .status(UserStatus.ACTIVE)
                 .build();
@@ -52,7 +54,36 @@ public class MemberService {
         return repo.findAll(pageable).map(this::toRes);
     }
 
-    // ✅ 비밀번호 변경
+    // ✅ 권한 적용된 조회
+    @Transactional(readOnly = true)
+    public MemberResponse getWithPermission(Long id, UserPrincipal user) {
+        MemberResponse mr = get(id);
+        if (user.isAdmin() || user.getId().equals(id)) {
+            return mr;
+        }
+        if (user.isTrainer() && mr.trainerId() != null && mr.trainerId().equals(user.getId())) {
+            return mr;
+        }
+        throw new AccessDeniedException("접근 권한이 없습니다.");
+    }
+
+    @Transactional(readOnly = true)
+    public Page<MemberResponse> listWithPermission(Pageable pageable, UserPrincipal user) {
+        if (!user.isAdmin()) {
+            throw new AccessDeniedException("관리자만 전체 목록을 조회할 수 있습니다.");
+        }
+        return list(pageable);
+    }
+
+    // ✅ 비밀번호 변경 (권한 체크 포함)
+    public void changePasswordWithPermission(Long memberId, PasswordChangeRequest req, UserPrincipal user) {
+        if (user.isAdmin() || user.getId().equals(memberId)) {
+            changePassword(memberId, req);
+            return;
+        }
+        throw new AccessDeniedException("본인만 비밀번호를 변경할 수 있습니다.");
+    }
+
     public void changePassword(Long memberId, PasswordChangeRequest req) {
         Member m = find(memberId);
 
@@ -81,9 +112,26 @@ public class MemberService {
         return toRes(m);
     }
 
+    // ✅ 권한 포함 업데이트
+    public MemberResponse updateWithPermission(Long id, MemberUpdateRequest req, UserPrincipal user) {
+        if (user.isAdmin() || user.getId().equals(id)) {
+            return update(id, req);
+        }
+        throw new AccessDeniedException("본인만 수정할 수 있습니다.");
+    }
+
     // ✅ 소프트 삭제
     public void delete(Long id) {
         repo.delete(find(id));
+    }
+
+    // ✅ 권한 포함 삭제
+    public void deleteWithPermission(Long id, UserPrincipal user) {
+        if (user.isAdmin() || user.getId().equals(id)) {
+            delete(id);
+            return;
+        }
+        throw new AccessDeniedException("본인만 삭제할 수 있습니다.");
     }
 
     private Member find(Long id) {
@@ -110,7 +158,7 @@ public class MemberService {
         Member member = find(memberId);
         Member trainer = find(trainerId);
 
-        if (!trainer.getRole().isTrainer()) {   // ✅ 헬퍼 메서드 사용
+        if (!trainer.getRole().isTrainer()) {
             throw new IllegalArgumentException("선택된 회원은 트레이너가 아닙니다.");
         }
 
@@ -118,7 +166,15 @@ public class MemberService {
         repo.save(member);
     }
 
-    // ✅ 트레이너가 맡은 회원 조회
+    // ✅ 트레이너 담당 회원 조회
+    @Transactional(readOnly = true)
+    public List<MemberResponse> getTraineesWithPermission(Long trainerId, UserPrincipal user) {
+        if (user.isAdmin() || user.getId().equals(trainerId)) {
+            return getTrainees(trainerId);
+        }
+        throw new AccessDeniedException("자신의 회원만 조회할 수 있습니다.");
+    }
+
     @Transactional(readOnly = true)
     public List<MemberResponse> getTrainees(Long trainerId) {
         return repo.findByTrainerId(trainerId)

@@ -22,7 +22,7 @@ public class DietLogController {
 
     private final DietLogService service;
 
-    // ✅ 생성
+    // ✅ 생성 (회원/트레이너/관리자)
     @PreAuthorize("hasAnyRole('OT','PT','TRAINER','ADMIN')")
     @PostMapping("/{memberId}")
     public DietLogResponse create(@PathVariable Long memberId,
@@ -32,13 +32,14 @@ public class DietLogController {
         return service.create(memberId, new DietLogRequest(title, content, media));
     }
 
-    // ✅ 회원별 조회
+    // ✅ 회원별 조회 (권한 체크는 Service에서)
     @GetMapping("/{memberId}")
     public List<DietLogResponse> listByMember(@PathVariable Long memberId) {
         return service.listByMember(memberId);
     }
 
-    // ✅ 전체 조회 (페이지네이션)
+    // ✅ 전체 조회 (관리자만)
+    @PreAuthorize("hasRole('ADMIN')")
     @GetMapping
     public Page<DietLogResponse> list(@RequestParam(defaultValue = "0") int page,
                                       @RequestParam(defaultValue = "20") int size) {
@@ -46,7 +47,7 @@ public class DietLogController {
         return service.findAll(pageable);
     }
 
-    // ✅ 검색/필터링
+    // ✅ 검색/필터링 (Service 권한체크 적용)
     @GetMapping("/search")
     public Page<DietLogResponse> search(
             @RequestParam(required = false) String keyword,
@@ -61,7 +62,7 @@ public class DietLogController {
         return service.search(keyword, memberId, fromDate, toDate, mediaType, pageable);
     }
 
-    // ✅ 수정
+    // ✅ 수정 (본인 / 트레이너 / 관리자)
     @PreAuthorize("hasAnyRole('OT','PT','TRAINER','ADMIN')")
     @PutMapping("/{logId}")
     public DietLogResponse update(@PathVariable Long logId,
@@ -71,14 +72,14 @@ public class DietLogController {
         return service.update(logId, new DietLogRequest(title, content, media));
     }
 
-    // ✅ 삭제
+    // ✅ 삭제 (본인 / 트레이너 / 관리자)
     @PreAuthorize("hasAnyRole('OT','PT','TRAINER','ADMIN')")
     @DeleteMapping("/{logId}")
     public void delete(@PathVariable Long logId) {
         service.delete(logId);
     }
 
-    // ✅ 본인 칼로리 합계
+    // ✅ 본인/트레이너/관리자 → 칼로리 통계 조회
     @GetMapping("/{memberId}/calories/total")
     public int getTotalCalories(@PathVariable Long memberId) {
         return service.getTotalCalories(memberId);
@@ -106,31 +107,5 @@ public class DietLogController {
     @GetMapping("/{memberId}/calories/month")
     public int getCaloriesThisMonth(@PathVariable Long memberId) {
         return service.getCaloriesThisMonth(memberId);
-    }
-
-    // ==========================
-    // ✅ 트레이너 전용 API
-    // ==========================
-
-    // 트레이너가 특정 회원 로그 조회
-    @GetMapping("/trainer/{memberId}")
-    @PreAuthorize("hasRole('TRAINER') or hasRole('ADMIN')")
-    public List<DietLogResponse> getMemberDietLogs(@PathVariable Long memberId) {
-        return service.listByMember(memberId);
-    }
-
-    // 트레이너가 특정 회원 칼로리 합계 조회 (오늘/주간/월간)
-    @GetMapping("/trainer/{memberId}/calories/{range}")
-    @PreAuthorize("hasRole('TRAINER') or hasRole('ADMIN')")
-    public int getMemberCalories(
-            @PathVariable Long memberId,
-            @PathVariable String range
-    ) {
-        return switch (range) {
-            case "today" -> service.getCaloriesToday(memberId);
-            case "week" -> service.getCaloriesThisWeek(memberId);
-            case "month" -> service.getCaloriesThisMonth(memberId);
-            default -> throw new IllegalArgumentException("잘못된 range 값입니다. (today/week/month)");
-        };
     }
 }
