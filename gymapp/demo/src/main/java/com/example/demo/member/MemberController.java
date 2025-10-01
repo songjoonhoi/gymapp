@@ -24,18 +24,20 @@ public class MemberController {
 
     private final MemberService service;
 
+    // ✅ 회원 생성 (회원가입)
     @PostMapping
     public MemberResponse create(@RequestBody @Valid MemberCreateRequest req) {
         return service.create(req);
     }
 
+    // ✅ 회원 단건 조회 (본인 / 담당 트레이너 / 관리자)
     @GetMapping("/{id}")
     public MemberResponse get(@PathVariable Long id,
                               @AuthenticationPrincipal UserPrincipal user) {
-        if (user.getRoleEnum() == Role.ADMIN || user.getId().equals(id)) {
+        if (user.isAdmin() || user.getId().equals(id)) {
             return service.get(id);
         }
-        if (user.getRoleEnum() == Role.TRAINER) {
+        if (user.isTrainer()) {
             MemberResponse mr = service.get(id);
             if (mr.trainerId() != null && mr.trainerId().equals(user.getId())) {
                 return mr;
@@ -44,63 +46,71 @@ public class MemberController {
         throw new AccessDeniedException("접근 권한이 없습니다.");
     }
 
+    // ✅ 전체 회원 조회 (관리자만)
     @GetMapping
     public Page<MemberResponse> list(@RequestParam(defaultValue = "0") int page,
                                      @RequestParam(defaultValue = "10") int size,
                                      @AuthenticationPrincipal UserPrincipal user) {
-        if (user.getRoleEnum() != Role.ADMIN) {
+        if (!user.isAdmin()) {
             throw new AccessDeniedException("관리자만 전체 목록을 조회할 수 있습니다.");
         }
         return service.list(PageRequest.of(page, size));
     }
 
+    // ✅ 회원 정보 수정 (본인 / 관리자만)
     @PutMapping("/{id}")
     public MemberResponse update(@PathVariable Long id,
                                  @RequestBody MemberUpdateRequest req,
                                  @AuthenticationPrincipal UserPrincipal user) {
-        if (user.getRoleEnum() == Role.ADMIN || user.getId().equals(id)) {
+        if (user.isAdmin() || user.getId().equals(id)) {
             return service.update(id, req);
         }
         throw new AccessDeniedException("본인만 수정할 수 있습니다.");
     }
 
+    // ✅ 회원 삭제 (본인 / 관리자만)
     @DeleteMapping("/{id}")
     public void delete(@PathVariable Long id,
                        @AuthenticationPrincipal UserPrincipal user) {
-        if (user.getRoleEnum() == Role.ADMIN || user.getId().equals(id)) {
+        if (user.isAdmin() || user.getId().equals(id)) {
             service.delete(id);
             return;
         }
         throw new AccessDeniedException("본인만 삭제할 수 있습니다.");
     }
 
+    // ✅ 내 정보 조회
     @GetMapping("/me")
     public MemberResponse me(@AuthenticationPrincipal UserPrincipal user) {
         return service.get(user.getId());
     }
 
+    // ✅ 내 정보 수정
     @PutMapping("/me")
     public MemberResponse updateMe(@AuthenticationPrincipal UserPrincipal user,
                                    @RequestBody MemberUpdateRequest req) {
         return service.update(user.getId(), req);
     }
 
+    // ✅ 내 계정 삭제
     @DeleteMapping("/me")
     public void deleteMe(@AuthenticationPrincipal UserPrincipal user) {
         service.delete(user.getId());
     }
 
+    // ✅ 비밀번호 변경
     @PutMapping("/{id}/password")
     public void changePassword(@PathVariable Long id,
                                @RequestBody @Valid PasswordChangeRequest req,
                                @AuthenticationPrincipal UserPrincipal user) {
-        if (user.getRoleEnum() == Role.ADMIN || user.getId().equals(id)) {
+        if (user.isAdmin() || user.getId().equals(id)) {
             service.changePassword(id, req);
             return;
         }
         throw new AccessDeniedException("본인만 비밀번호를 변경할 수 있습니다.");
     }
 
+    // ✅ (관리자) 트레이너 배정/변경
     @PreAuthorize("hasRole('ADMIN')")
     @PutMapping("/{memberId}/assign-trainer/{trainerId}")
     public void assignTrainer(@PathVariable Long memberId,
@@ -108,11 +118,12 @@ public class MemberController {
         service.assignTrainer(memberId, trainerId);
     }
 
+    // ✅ (트레이너/관리자) 트레이너 담당 회원 목록
     @PreAuthorize("hasAnyRole('TRAINER','ADMIN')")
     @GetMapping("/{trainerId}/trainees")
     public List<MemberResponse> trainees(@PathVariable Long trainerId,
                                          @AuthenticationPrincipal UserPrincipal user) {
-        if (user.getRoleEnum() == Role.ADMIN || user.getId().equals(trainerId)) {
+        if (user.isAdmin() || user.getId().equals(trainerId)) {
             return service.getTrainees(trainerId);
         }
         throw new AccessDeniedException("자신의 회원만 조회할 수 있습니다.");

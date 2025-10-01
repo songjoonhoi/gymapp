@@ -6,43 +6,41 @@ import com.example.demo.member.dto.MemberCreateRequest;
 import com.example.demo.member.dto.MemberResponse;
 import com.example.demo.member.dto.MemberUpdateRequest;
 import com.example.demo.member.dto.PasswordChangeRequest;
-
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
-
-import java.util.List;
-
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.security.crypto.password.PasswordEncoder;
 
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
 @Transactional
 public class MemberService {
-    
+
     private final MemberRepository repo;
     private final PasswordEncoder passwordEncoder;
 
+    // ✅ 회원 생성
     public MemberResponse create(MemberCreateRequest req) {
-    if (repo.existsByEmail(req.email())) {
-        throw new IllegalArgumentException("이미 존재하는 이메일입니다.");
+        if (repo.existsByEmail(req.email())) {
+            throw new IllegalArgumentException("이미 존재하는 이메일입니다.");
+        }
+
+        Member m = Member.builder()
+                .name(req.name())
+                .email(req.email())
+                .phone(req.phone())
+                .password(passwordEncoder.encode(req.password())) // ✅ 해시 저장
+                .role(req.role() == null ? Role.OT : req.role())
+                .status(UserStatus.ACTIVE)
+                .build();
+
+        return toRes(repo.save(m));
     }
-
-    Member m = Member.builder()
-            .name(req.name())
-            .email(req.email())
-            .phone(req.phone())
-            .password(passwordEncoder.encode(req.password())) // ✅ 해시 저장
-            .role(req.role() == null ? Role.OT : req.role())
-            .status(UserStatus.ACTIVE)
-            .build();
-
-    return toRes(repo.save(m));
-}
 
     @Transactional(readOnly = true)
     public MemberResponse get(Long id) {
@@ -65,7 +63,7 @@ public class MemberService {
         m.setPassword(passwordEncoder.encode(req.newPassword()));
     }
 
-    // ✅ update 보강
+    // ✅ 회원 정보 수정
     public MemberResponse update(Long id, MemberUpdateRequest req) {
         Member m = find(id);
 
@@ -83,35 +81,36 @@ public class MemberService {
         return toRes(m);
     }
 
-    // 소프트 삭제: 엔티티의 @SQLDelete가 deleted_at을 채움
+    // ✅ 소프트 삭제
     public void delete(Long id) {
         repo.delete(find(id));
     }
 
     private Member find(Long id) {
-        return repo.findById(id).orElseThrow(() -> new EntityNotFoundException("회원이 없습니다: " + id));
+        return repo.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("회원이 없습니다: " + id));
     }
 
     private MemberResponse toRes(Member m) {
-    return new MemberResponse(
-            m.getId(),
-            m.getName(),
-            m.getEmail(),
-            m.getPhone(),
-            m.getRole(),
-            m.getStatus(),
-            m.getCreatedAt(),
-            m.getUpdatedAt(),
-            m.getTrainer() != null ? m.getTrainer().getId() : null  // ✅ 추가
-    );
-}
-    
+        return new MemberResponse(
+                m.getId(),
+                m.getName(),
+                m.getEmail(),
+                m.getPhone(),
+                m.getRole(),
+                m.getStatus(),
+                m.getCreatedAt(),
+                m.getUpdatedAt(),
+                m.getTrainer() != null ? m.getTrainer().getId() : null
+        );
+    }
+
     // ✅ 트레이너 배정/변경
     public void assignTrainer(Long memberId, Long trainerId) {
         Member member = find(memberId);
         Member trainer = find(trainerId);
 
-        if (trainer.getRole() != Role.TRAINER) {
+        if (!trainer.getRole().isTrainer()) {   // ✅ 헬퍼 메서드 사용
             throw new IllegalArgumentException("선택된 회원은 트레이너가 아닙니다.");
         }
 
@@ -127,5 +126,4 @@ public class MemberService {
                 .map(this::toRes)
                 .toList();
     }
-
 }

@@ -31,7 +31,7 @@ public class AdminService {
                 .map(m -> new MemberResponse(
                         m.getId(), m.getName(), m.getEmail(),
                         m.getPhone(), m.getRole(), m.getStatus(),
-                        m.getCreatedAt(), m.getUpdatedAt()
+                        m.getCreatedAt(), m.getUpdatedAt(), null
                 ))
                 .toList();
     }
