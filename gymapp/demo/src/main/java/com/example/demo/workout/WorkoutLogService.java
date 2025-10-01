@@ -3,6 +3,8 @@ package com.example.demo.workout;
 import com.example.demo.auth.UserPrincipal;
 import com.example.demo.member.Member;
 import com.example.demo.member.MemberRepository;
+import com.example.demo.notification.NotificationService;
+import com.example.demo.notification.NotificationType;
 import com.example.demo.storage.FileStorage;
 import com.example.demo.workout.dto.WorkoutLogRequest;
 import com.example.demo.workout.dto.WorkoutLogResponse;
@@ -30,6 +32,7 @@ public class WorkoutLogService {
     private final WorkoutLogRepository logRepo;
     private final MemberRepository memberRepo;
     private final FileStorage fileStorage;
+    private final NotificationService notiService;
 
     // ✅ 생성
     public WorkoutLogResponse create(Long memberId, WorkoutLogRequest req) {
@@ -55,6 +58,8 @@ public class WorkoutLogService {
                 .build();
 
         logRepo.save(log);
+        // 🔔 알림 추가
+        notiService.create(memberId, NotificationType.SUCCESS, "운동 기록이 작성되었습니다!");
         return toRes(log);
     }
 
@@ -76,6 +81,8 @@ public class WorkoutLogService {
             log.setMediaType(getMediaType(req.media()));
         }
 
+        // 🔔 알림 추가
+        notiService.create(log.getMember().getId(), NotificationType.SUCCESS, "운동 기록이 수정되었습니다!");
         return toRes(log);
     }
 
@@ -90,6 +97,9 @@ public class WorkoutLogService {
             fileStorage.delete(log.getMediaUrl());
         }
         logRepo.delete(log);
+
+        // 🔔 알림 추가
+        notiService.create(log.getMember().getId(), NotificationType.WARNING, "운동 기록이 삭제되었습니다.");
     }
 
     @Transactional(readOnly = true)

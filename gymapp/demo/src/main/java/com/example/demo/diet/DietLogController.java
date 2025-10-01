@@ -77,4 +77,60 @@ public class DietLogController {
     public void delete(@PathVariable Long logId) {
         service.delete(logId);
     }
+
+    // ✅ 본인 칼로리 합계
+    @GetMapping("/{memberId}/calories/total")
+    public int getTotalCalories(@PathVariable Long memberId) {
+        return service.getTotalCalories(memberId);
+    }
+
+    @GetMapping("/{memberId}/calories/period")
+    public int getCaloriesForPeriod(
+            @PathVariable Long memberId,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime start,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime end
+    ) {
+        return service.getCaloriesForPeriod(memberId, start, end);
+    }
+
+    @GetMapping("/{memberId}/calories/today")
+    public int getCaloriesToday(@PathVariable Long memberId) {
+        return service.getCaloriesToday(memberId);
+    }
+
+    @GetMapping("/{memberId}/calories/week")
+    public int getCaloriesThisWeek(@PathVariable Long memberId) {
+        return service.getCaloriesThisWeek(memberId);
+    }
+
+    @GetMapping("/{memberId}/calories/month")
+    public int getCaloriesThisMonth(@PathVariable Long memberId) {
+        return service.getCaloriesThisMonth(memberId);
+    }
+
+    // ==========================
+    // ✅ 트레이너 전용 API
+    // ==========================
+
+    // 트레이너가 특정 회원 로그 조회
+    @GetMapping("/trainer/{memberId}")
+    @PreAuthorize("hasRole('TRAINER') or hasRole('ADMIN')")
+    public List<DietLogResponse> getMemberDietLogs(@PathVariable Long memberId) {
+        return service.listByMember(memberId);
+    }
+
+    // 트레이너가 특정 회원 칼로리 합계 조회 (오늘/주간/월간)
+    @GetMapping("/trainer/{memberId}/calories/{range}")
+    @PreAuthorize("hasRole('TRAINER') or hasRole('ADMIN')")
+    public int getMemberCalories(
+            @PathVariable Long memberId,
+            @PathVariable String range
+    ) {
+        return switch (range) {
+            case "today" -> service.getCaloriesToday(memberId);
+            case "week" -> service.getCaloriesThisWeek(memberId);
+            case "month" -> service.getCaloriesThisMonth(memberId);
+            default -> throw new IllegalArgumentException("잘못된 range 값입니다. (today/week/month)");
+        };
+    }
 }

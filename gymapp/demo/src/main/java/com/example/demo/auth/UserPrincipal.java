@@ -4,6 +4,7 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
+import com.example.demo.common.enums.Role;
 
 import java.util.Collection;
 
@@ -12,7 +13,7 @@ import java.util.Collection;
 public class UserPrincipal implements UserDetails {
     private final Long id;
     private final String email;
-    private final String role;
+    private final String role; // DB에는 String으로 저장된 Role
     private final Collection<? extends GrantedAuthority> authorities;
 
     @Override
@@ -25,15 +26,13 @@ public class UserPrincipal implements UserDetails {
         return email;
     }
 
-    @Override
-    public boolean isAccountNonExpired() { return true; }
+    @Override public boolean isAccountNonExpired() { return true; }
+    @Override public boolean isAccountNonLocked() { return true; }
+    @Override public boolean isCredentialsNonExpired() { return true; }
+    @Override public boolean isEnabled() { return true; }
 
-    @Override
-    public boolean isAccountNonLocked() { return true; }
-
-    @Override
-    public boolean isCredentialsNonExpired() { return true; }
-
-    @Override
-    public boolean isEnabled() { return true; }
+    // ✅ Enum 변환 메서드
+    public Role getRoleEnum() {
+        return Role.valueOf(this.role);
+    }
 }

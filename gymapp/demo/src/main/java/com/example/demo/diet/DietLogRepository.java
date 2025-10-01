@@ -39,4 +39,20 @@ public interface DietLogRepository extends JpaRepository<DietLog, Long> {
 
     @Query("SELECT d.mediaType, COUNT(d) FROM DietLog d WHERE d.member.id = :memberId GROUP BY d.mediaType")
     List<Object[]> countByMediaType(Long memberId);
+
+    @Query("SELECT MAX(d.createdAt) FROM DietLog d WHERE d.member.id = :memberId")
+    LocalDateTime findLastCreatedAtByMemberId(Long memberId);
+
+    // 전체 합계
+    @Query("SELECT COALESCE(SUM(d.calories), 0) FROM DietLog d WHERE d.member.id = :memberId")
+    int findTotalCalories(@Param("memberId") Long memberId);
+
+    // 기간별 합계
+    @Query("SELECT COALESCE(SUM(d.calories), 0) FROM DietLog d " +
+           "WHERE d.member.id = :memberId AND d.createdAt BETWEEN :start AND :end")
+    int findCaloriesBetween(
+            @Param("memberId") Long memberId,
+            @Param("start") LocalDateTime start,
+            @Param("end") LocalDateTime end
+    );
 }

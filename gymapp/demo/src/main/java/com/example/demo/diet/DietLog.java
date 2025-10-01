@@ -31,4 +31,7 @@ public class DietLog {
 
     @CreationTimestamp
     private LocalDateTime createdAt;
+
+    @Column
+    private Integer calories;  // ✅ AI 분석 결과 칼로리 저장
 }

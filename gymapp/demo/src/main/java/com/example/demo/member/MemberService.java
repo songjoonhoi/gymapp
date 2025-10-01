@@ -9,6 +9,9 @@ import com.example.demo.member.dto.PasswordChangeRequest;
 
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+
+import java.util.List;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -90,10 +93,39 @@ public class MemberService {
     }
 
     private MemberResponse toRes(Member m) {
-        return new MemberResponse(
-                m.getId(), m.getName(), m.getEmail(), m.getPhone(),
-                m.getRole(), m.getStatus(), m.getCreatedAt(), m.getUpdatedAt()
-        );
-    }
+    return new MemberResponse(
+            m.getId(),
+            m.getName(),
+            m.getEmail(),
+            m.getPhone(),
+            m.getRole(),
+            m.getStatus(),
+            m.getCreatedAt(),
+            m.getUpdatedAt(),
+            m.getTrainer() != null ? m.getTrainer().getId() : null  // ✅ 추가
+    );
+}
     
+    // ✅ 트레이너 배정/변경
+    public void assignTrainer(Long memberId, Long trainerId) {
+        Member member = find(memberId);
+        Member trainer = find(trainerId);
+
+        if (trainer.getRole() != Role.TRAINER) {
+            throw new IllegalArgumentException("선택된 회원은 트레이너가 아닙니다.");
+        }
+
+        member.setTrainer(trainer);
+        repo.save(member);
+    }
+
+    // ✅ 트레이너가 맡은 회원 조회
+    @Transactional(readOnly = true)
+    public List<MemberResponse> getTrainees(Long trainerId) {
+        return repo.findByTrainerId(trainerId)
+                .stream()
+                .map(this::toRes)
+                .toList();
+    }
+
 }

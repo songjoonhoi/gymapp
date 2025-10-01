@@ -39,4 +39,7 @@ public interface WorkoutLogRepository extends JpaRepository<WorkoutLog, Long> {
 
     @Query("SELECT w.mediaType, COUNT(w) FROM WorkoutLog w WHERE w.member.id = :memberId GROUP BY w.mediaType")
     List<Object[]> countByMediaType(Long memberId);
+
+    @Query("SELECT MAX(w.createdAt) FROM WorkoutLog w WHERE w.member.id = :memberId")
+    LocalDateTime findLastCreatedAtByMemberId(Long memberId);
 }

@@ -6,7 +6,13 @@ import com.example.demo.common.enums.UserStatus;
 import java.time.LocalDateTime;
 
 public record MemberResponse(
-        Long id, String name, String email, String phone,
-        Role role, UserStatus status,
-        LocalDateTime createdAt, LocalDateTime updatedAt
+        Long id,
+        String name,
+        String email,
+        String phone,
+        Role role,
+        UserStatus status,
+        LocalDateTime createdAt,
+        LocalDateTime updatedAt,
+        Long trainerId // ✅ 담당 트레이너 ID
 ) {}

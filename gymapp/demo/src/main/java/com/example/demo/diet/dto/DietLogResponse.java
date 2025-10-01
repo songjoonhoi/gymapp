@@ -7,7 +7,10 @@ public record DietLogResponse(
         Long memberId,
         String title,
         String content,
-        String previewUrl,
+        String mediaUrl,
         String mediaType,
+        Integer calories,   // ✅ 칼로리 저장
+        String aiCalories,   // ✅ 추가
+        String aiNutrition,  // ✅ 추가
         LocalDateTime createdAt
 ) {}

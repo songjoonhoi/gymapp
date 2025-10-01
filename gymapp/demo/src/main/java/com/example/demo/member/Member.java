@@ -40,5 +40,8 @@ public class Member extends BaseEntity {
     @Column(nullable = false, length = 20)
     private UserStatus status; // ACTIVE/INACTIVE
 
-    
+    // ✅ 담당 트레이너
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "trainer_id")
+    private Member trainer;
 }

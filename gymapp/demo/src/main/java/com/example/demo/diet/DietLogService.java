@@ -1,10 +1,13 @@
 package com.example.demo.diet;
 
+import com.example.demo.ai.AiNutritionService;
 import com.example.demo.auth.UserPrincipal;
 import com.example.demo.diet.dto.DietLogRequest;
 import com.example.demo.diet.dto.DietLogResponse;
 import com.example.demo.member.Member;
 import com.example.demo.member.MemberRepository;
+import com.example.demo.notification.NotificationService;
+import com.example.demo.notification.NotificationType;
 import com.example.demo.storage.FileStorage;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
@@ -18,7 +21,9 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.List;
 
 @Service
@@ -29,33 +34,71 @@ public class DietLogService {
     private final DietLogRepository logRepo;
     private final MemberRepository memberRepo;
     private final FileStorage fileStorage;
+    private final NotificationService notiService;
+    private final AiNutritionService aiService;
+
 
     // ✅ 생성
     public DietLogResponse create(Long memberId, DietLogRequest req) {
-        Member member = memberRepo.findById(memberId)
-                .orElseThrow(() -> new EntityNotFoundException("회원 없음: " + memberId));
+    Member member = memberRepo.findById(memberId)
+            .orElseThrow(() -> new EntityNotFoundException("회원 없음: " + memberId));
 
-        String mediaUrl = null;
-        String mediaType = null;
-        MultipartFile file = req.media();
+    String mediaUrl = null;
+    String mediaType = null;
+    MultipartFile file = req.media();
 
-        if (file != null && !file.isEmpty()) {
-            mediaUrl = fileStorage.save(file);
-            String contentType = file.getContentType();
-            mediaType = (contentType != null && contentType.startsWith("video")) ? "VIDEO" : "IMAGE";
-        }
-
-        DietLog log = DietLog.builder()
-                .member(member)
-                .title(req.title())
-                .content(req.content())
-                .mediaUrl(mediaUrl)
-                .mediaType(mediaType)
-                .build();
-
-        logRepo.save(log);
-        return toRes(log);
+    if (file != null && !file.isEmpty()) {
+        mediaUrl = fileStorage.save(file);
+        String contentType = file.getContentType();
+        mediaType = (contentType != null && contentType.startsWith("video")) ? "VIDEO" : "IMAGE";
     }
+
+    // ✅ AI 분석 (칼로리만 저장)
+    Integer calories = null;
+    String aiCalories = null;
+    String aiNutrition = null;
+    if (mediaUrl != null && "IMAGE".equals(mediaType)) {
+        try {
+            var aiResult = aiService.analyzeFood(mediaUrl);
+            
+            aiCalories = aiResult.getOrDefault("calories", "0").toString();
+            calories = Integer.parseInt(aiCalories.replaceAll("[^0-9]", ""));
+            aiNutrition = aiResult.getOrDefault("nutrition", "분석 실패").toString();
+        } catch (Exception e) {
+            calories = null;
+            aiCalories = "분석 오류"; 
+            aiNutrition = "분석 오류";
+        }
+    }
+
+    DietLog log = DietLog.builder()
+            .member(member)
+            .title(req.title())
+            .content(req.content())
+            .mediaUrl(mediaUrl)
+            .mediaType(mediaType)
+            .calories(calories)   // ✅ DB 저장
+            .build();
+
+    logRepo.save(log);
+
+    // 🔔 알림 추가
+    notiService.create(memberId, NotificationType.SUCCESS, "식단 기록이 작성되었습니다!");
+
+    // ✅ AI 결과 포함한 응답
+    return new DietLogResponse(
+        log.getId(),
+        log.getMember().getId(),
+        log.getTitle(),
+        log.getContent(),
+        mediaUrl,
+        mediaType,
+        log.getCalories(),   // ✅ DB 칼로리 (Integer)
+        aiCalories,          // ✅ AI 분석된 칼로리 (String)
+        aiNutrition,         // ✅ AI 분석된 영양소
+        log.getCreatedAt()
+);
+}
 
     // ✅ 수정 (본인만 가능)
     public DietLogResponse update(Long logId, DietLogRequest req) {
@@ -75,6 +118,8 @@ public class DietLogService {
             log.setMediaType(getMediaType(req.media()));
         }
 
+        // 🔔 알림 추가
+        notiService.create(log.getMember().getId(), NotificationType.SUCCESS, "식단 기록이 수정되었습니다!");
         return toRes(log);
     }
 
@@ -89,6 +134,9 @@ public class DietLogService {
             fileStorage.delete(log.getMediaUrl());
         }
         logRepo.delete(log);
+
+        // 🔔 알림 추가
+        notiService.create(log.getMember().getId(), NotificationType.WARNING, "식단 기록이 삭제되었습니다.");
     }
 
     @Transactional(readOnly = true)
@@ -104,20 +152,23 @@ public class DietLogService {
     }
 
     private DietLogResponse toRes(DietLog log) {
-        String previewUrl = (log.getMediaUrl() != null)
-                ? "/api/diet-logs/" + log.getId() + "/media"
-                : null;
+    String previewUrl = (log.getMediaUrl() != null)
+            ? "/api/diet-logs/" + log.getId() + "/media"
+            : null;
 
-        return new DietLogResponse(
-                log.getId(),
-                log.getMember().getId(),
-                log.getTitle(),
-                log.getContent(),
-                previewUrl,
-                log.getMediaType(),
-                log.getCreatedAt()
-        );
-    }
+    return new DietLogResponse(
+        log.getId(),
+        log.getMember().getId(),
+        log.getTitle(),
+        log.getContent(),
+        previewUrl,
+        log.getMediaType(),
+        log.getCalories(),  // ✅ DB 칼로리
+        null,               // aiCalories (조회 시 없음)
+        null,               // aiNutrition (조회 시 없음)
+        log.getCreatedAt()
+);
+}
 
     private String getMediaType(MultipartFile file) {
         String contentType = file.getContentType();
@@ -136,7 +187,7 @@ public class DietLogService {
     }
 
     @Transactional(readOnly = true)
-public Page<DietLogResponse> search(
+    public Page<DietLogResponse> search(
         String keyword,
         Long memberId,
         LocalDateTime fromDate,
@@ -148,4 +199,43 @@ public Page<DietLogResponse> search(
             .map(this::toRes);
 }
 
+    @Transactional(readOnly = true)
+    public int getTotalCalories(Long memberId) {
+        return logRepo.findTotalCalories(memberId);
+    }
+
+    @Transactional(readOnly = true)
+    public int getCaloriesForPeriod(Long memberId, LocalDateTime start, LocalDateTime end) {
+        return logRepo.findCaloriesBetween(memberId, start, end);
+    }
+
+    @Transactional(readOnly = true)
+public int getCaloriesToday(Long memberId) {
+    LocalDate today = LocalDate.now();
+    LocalDateTime start = today.atStartOfDay();
+    LocalDateTime end = today.atTime(LocalTime.MAX);
+    return logRepo.findCaloriesBetween(memberId, start, end);
+}
+
+    @Transactional(readOnly = true)
+    public int getCaloriesThisWeek(Long memberId) {
+        LocalDate today = LocalDate.now();
+        LocalDate startOfWeek = today.with(java.time.DayOfWeek.MONDAY); // 월요일 기준
+        LocalDate endOfWeek = today.with(java.time.DayOfWeek.SUNDAY);
+
+        LocalDateTime start = startOfWeek.atStartOfDay();
+        LocalDateTime end = endOfWeek.atTime(LocalTime.MAX);
+        return logRepo.findCaloriesBetween(memberId, start, end);
+    }
+
+    @Transactional(readOnly = true)
+    public int getCaloriesThisMonth(Long memberId) {
+        LocalDate today = LocalDate.now();
+        LocalDate firstDay = today.withDayOfMonth(1);
+        LocalDate lastDay = today.withDayOfMonth(today.lengthOfMonth());
+
+        LocalDateTime start = firstDay.atStartOfDay();
+        LocalDateTime end = lastDay.atTime(LocalTime.MAX);
+        return logRepo.findCaloriesBetween(memberId, start, end);
+    }
 }
