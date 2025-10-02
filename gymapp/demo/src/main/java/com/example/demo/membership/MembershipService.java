@@ -1,11 +1,13 @@
 package com.example.demo.membership;
 
+import com.example.demo.auth.UserPrincipal;
 import com.example.demo.common.enums.Role;
 import com.example.demo.member.Member;
 import com.example.demo.member.MemberRepository;
 import com.example.demo.membership.dto.*;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -19,10 +21,24 @@ public class MembershipService {
     private final MembershipRepository membershipRepository;
     private final MemberRepository memberRepository;
 
+    // ✅ 멤버십 조회 (권한 체크 포함)
+    @Transactional(readOnly = true)
+    public MembershipResponse getByMemberIdWithPermission(Long memberId, UserPrincipal user) {
+        checkViewPermission(memberId, user);
+        Membership m = findOrCreate(memberId);
+        return toRes(m);
+    }
+
     @Transactional(readOnly = true)
     public MembershipResponse getByMemberId(Long memberId) {
-        Membership m = findOrCreate(memberId); // 없으면 0세션으로 생성
+        Membership m = findOrCreate(memberId);
         return toRes(m);
+    }
+
+    // ✅ PT 세션 등록 (권한 체크 포함)
+    public MembershipResponse registerWithPermission(Long memberId, MembershipRegisterRequest req, UserPrincipal user) {
+        checkTrainerPermission(memberId, user);
+        return register(memberId, req);
     }
 
     public MembershipResponse register(Long memberId, MembershipRegisterRequest req) {
@@ -44,6 +60,12 @@ public class MembershipService {
         return toRes(m);
     }
 
+    // ✅ PT 세션 차감 (권한 체크 포함)
+    public MembershipResponse decrementWithPermission(Long memberId, MembershipDecrementRequest req, UserPrincipal user) {
+        checkTrainerPermission(memberId, user);
+        return decrement(memberId, req);
+    }
+
     public MembershipResponse decrement(Long memberId, MembershipDecrementRequest req) {
         Member member = findMember(memberId);
         Membership m = findOrCreate(memberId);
@@ -56,9 +78,21 @@ public class MembershipService {
         return toRes(m);
     }
 
+    // ✅ 잔여 적은 회원 알림 (권한 체크 포함)
+    @Transactional(readOnly = true)
+    public List<LowRemainItem> lowRemainListWithPermission(int threshold, UserPrincipal user) {
+        if (user.isAdmin()) {
+            // 관리자는 전체 회원 조회
+            return lowRemainList(threshold);
+        } else if (user.isTrainer()) {
+            // 트레이너는 자기 담당 회원만
+            return lowRemainListForTrainer(user.getId(), threshold);
+        }
+        throw new AccessDeniedException("트레이너 또는 관리자만 조회할 수 있습니다.");
+    }
+
     @Transactional(readOnly = true)
     public List<LowRemainItem> lowRemainList(int threshold) {
-        // 간단 구현: membership 전체 스캔 (데모 단계)
         return membershipRepository.findAll().stream()
                 .filter(m -> m.isLowRemain(threshold))
                 .map(m -> new LowRemainItem(
@@ -70,7 +104,71 @@ public class MembershipService {
                 .toList();
     }
 
-    // ---- helpers ----
+    @Transactional(readOnly = true)
+    public List<LowRemainItem> lowRemainListForTrainer(Long trainerId, int threshold) {
+        return membershipRepository.findAll().stream()
+                .filter(m -> {
+                    Member member = m.getMember();
+                    return member.getTrainer() != null && 
+                           member.getTrainer().getId().equals(trainerId) &&
+                           m.isLowRemain(threshold);
+                })
+                .map(m -> new LowRemainItem(
+                        m.getMember().getId(),
+                        m.getMember().getName(),
+                        m.getMember().getPhone(),
+                        m.remainPT()
+                ))
+                .toList();
+    }
+
+    // ========================
+    // 🔒 권한 체크 헬퍼
+    // ========================
+
+    /**
+     * 조회 권한 체크: 본인 + 담당 트레이너 + 관리자
+     */
+    private void checkViewPermission(Long memberId, UserPrincipal user) {
+        // 관리자는 모든 회원 조회 가능
+        if (user.isAdmin()) return;
+
+        // 본인은 자기 멤버십 조회 가능
+        if (user.getId().equals(memberId)) return;
+
+        // 트레이너는 담당 회원만 조회 가능
+        if (user.isTrainer()) {
+            Member member = findMember(memberId);
+            if (member.getTrainer() != null && member.getTrainer().getId().equals(user.getId())) {
+                return;
+            }
+        }
+
+        throw new AccessDeniedException("해당 회원의 멤버십을 조회할 권한이 없습니다.");
+    }
+
+    /**
+     * 등록/차감 권한 체크: 담당 트레이너 + 관리자만
+     */
+    private void checkTrainerPermission(Long memberId, UserPrincipal user) {
+        // 관리자는 모든 회원 관리 가능
+        if (user.isAdmin()) return;
+
+        // 트레이너는 담당 회원만 관리 가능
+        if (user.isTrainer()) {
+            Member member = findMember(memberId);
+            if (member.getTrainer() != null && member.getTrainer().getId().equals(user.getId())) {
+                return;
+            }
+        }
+
+        throw new AccessDeniedException("해당 회원의 PT 세션을 관리할 권한이 없습니다.");
+    }
+
+    // ========================
+    // 🔧 헬퍼 메서드
+    // ========================
+
     private Member findMember(Long memberId) {
         return memberRepository.findById(memberId)
                 .orElseThrow(() -> new EntityNotFoundException("회원이 없습니다: " + memberId));
