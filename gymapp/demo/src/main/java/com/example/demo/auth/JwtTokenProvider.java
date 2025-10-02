@@ -1,5 +1,6 @@
 package com.example.demo.auth;
 
+import com.example.demo.common.enums.Role;
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
 import org.springframework.beans.factory.annotation.Value;
@@ -28,11 +29,12 @@ public class JwtTokenProvider {
         this.expirationMs = expirationMs;
     }
 
-    public String generateToken(Long memberId, String email, String role) {
+    // ✅ Role Enum 직접 사용
+    public String generateToken(Long memberId, String email, Role role) {
         long now = System.currentTimeMillis();
         return Jwts.builder()
                 .setSubject(email)
-                .setClaims(Map.of("id", memberId, "role", role))
+                .setClaims(Map.of("id", memberId, "role", role.name()))
                 .setIssuedAt(new Date(now))
                 .setExpiration(new Date(now + expirationMs))
                 .signWith(key, SignatureAlgorithm.HS256)
@@ -44,13 +46,14 @@ public class JwtTokenProvider {
 
         Long id = jws.getBody().get("id", Long.class);
         String email = jws.getBody().getSubject();
-        String role = jws.getBody().get("role", String.class);
+        String roleStr = jws.getBody().get("role", String.class);
+        Role role = Role.valueOf(roleStr); // ✅ Enum 변환
 
         UserPrincipal principal = new UserPrincipal(
                 id,
                 email,
                 role,
-                List.of(new SimpleGrantedAuthority("ROLE_" + role))
+                List.of(new SimpleGrantedAuthority("ROLE_" + role.name()))
         );
 
         return new UsernamePasswordAuthenticationToken(principal, token, principal.getAuthorities());
@@ -65,5 +68,7 @@ public class JwtTokenProvider {
         }
     }
 
-    public long getExpirationMs(){ return expirationMs; }
+    public long getExpirationMs() {
+        return expirationMs;
+    }
 }

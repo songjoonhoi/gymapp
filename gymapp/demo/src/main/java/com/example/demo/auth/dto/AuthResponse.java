@@ -1,9 +1,11 @@
 package com.example.demo.auth.dto;
 
+import com.example.demo.common.enums.Role;
+
 public record AuthResponse(
-        String tokenType,   // "Bearer"
+        String tokenType,
         String accessToken,
-        Long   memberId,
-        String role,
-        long   expiresAt    // epoch millis
+        Long memberId,
+        Role role,      // ✅ String → Role Enum
+        long expiresAt
 ) {}
