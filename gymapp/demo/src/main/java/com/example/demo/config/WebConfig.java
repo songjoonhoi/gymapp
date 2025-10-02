@@ -14,16 +14,22 @@ public class WebConfig implements WebMvcConfigurer {
 
     @Override
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
-        // uploads/ 폴더를 외부 URL로 매핑
+        // uploads 폴더 전체를 외부 URL로 매핑
         registry.addResourceHandler("/uploads/**")
                 .addResourceLocations("file:uploads/");
+        
+        // media 폴더를 직접 매핑 추가
+        registry.addResourceHandler("/media/**")
+                .addResourceLocations("file:uploads/media/");
     }
 
     @Override
     public void addCorsMappings(CorsRegistry registry) {
         registry.addMapping("/**")
                 .allowedOrigins(allowedOrigins)
-                .allowedMethods("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS") // PATCH 포함
-                .allowCredentials(true);
+                .allowedMethods("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS")
+                .allowedHeaders("*")
+                .allowCredentials(true)
+                .maxAge(3600);
     }
 }
