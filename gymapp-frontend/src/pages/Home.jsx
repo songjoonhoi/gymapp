@@ -71,7 +71,7 @@ const Home = () => {
         </Card>
 
         {/* 나의 통계 카드 */}
-        <Card onClick={() => navigate('/stats')} className="cursor-pointer hover:shadow-lg transition-shadow">
+        <Card onClick={() => navigate('/statistics')} className="cursor-pointer hover:shadow-lg transition-shadow">
           <div className="flex items-center justify-between">
             <div className="flex items-center">
               <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center text-2xl mr-4">
