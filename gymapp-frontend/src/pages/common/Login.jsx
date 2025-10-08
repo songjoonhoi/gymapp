@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import Button from '../components/Button';
-import Input from '../components/Input';
-import api from '../services/api';
+import Button from '../../components/Button';
+import Input from '../../components/Input';
+import api from '../../services/api';
 
 const Login = () => {
   const navigate = useNavigate();

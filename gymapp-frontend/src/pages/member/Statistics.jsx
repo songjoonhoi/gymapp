@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import BottomNav from '../components/BottomNav';
-import api from '../services/api';
+import BottomNav from '../../components/BottomNav';
+import api from '../../services/api';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts';
 
 const Statistics = () => {

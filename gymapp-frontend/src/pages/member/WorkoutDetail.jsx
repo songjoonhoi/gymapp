@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import Button from '../components/Button';
-import api from '../services/api';
+import Button from '../../components/Button';
+import api from '../../services/api';
 
 const WorkoutDetail = () => {
   const navigate = useNavigate();

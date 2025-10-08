@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import BottomNav from '../components/BottomNav';
-import Button from '../components/Button';
-import Input from '../components/Input';
-import api from '../services/api';
+import BottomNav from '../../components/BottomNav';
+import Button from '../../components/Button';
+import Input from '../../components/Input';
+import api from '../../services/api';
 
 const Profile = () => {
   const navigate = useNavigate();
@@ -108,7 +108,7 @@ const Profile = () => {
           </div>
         </div>
 
-        {/* 정보 수정 폼 */}
+        {/* 정보 수정 폼  */}
         {isEditing ? (
           <form onSubmit={handleUpdate} className="space-y-4 mb-6">
             <div className="bg-white rounded-2xl shadow-md p-6 space-y-4">
@@ -166,6 +166,16 @@ const Profile = () => {
             </Button>
           </div>
         )}
+        
+        {/* 비밀번호 변경 버튼 추가 */}
+        <Button 
+          fullWidth 
+          variant="secondary"
+          onClick={() => navigate('/password-change')}
+          className="mb-4"
+        >
+          비밀번호 변경
+        </Button>
 
         {/* 로그아웃 버튼 */}
         <Button variant="danger" fullWidth onClick={handleLogout}>

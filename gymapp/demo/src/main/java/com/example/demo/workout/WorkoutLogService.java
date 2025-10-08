@@ -20,7 +20,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -34,8 +33,10 @@ public class WorkoutLogService {
     private final FileStorage fileStorage;
     private final NotificationService notiService;
 
-    // ✅ 생성
+    // ✅ 생성 (권한 체크 추가)
     public WorkoutLogResponse create(Long memberId, WorkoutLogRequest req) {
+        checkWritePermission(memberId); // 🔒 작성 권한 확인
+        
         Member member = memberRepo.findById(memberId)
                 .orElseThrow(() -> new EntityNotFoundException("회원 없음: " + memberId));
 
@@ -58,17 +59,18 @@ public class WorkoutLogService {
                 .build();
 
         logRepo.save(log);
+        
         // 🔔 알림 추가
         notiService.create(memberId, NotificationType.SUCCESS, "운동 기록이 작성되었습니다!");
         return toRes(log);
     }
 
-    // ✅ 수정 (본인만 가능)
+    // ✅ 수정 (권한 체크)
     public WorkoutLogResponse update(Long logId, WorkoutLogRequest req) {
         WorkoutLog log = logRepo.findById(logId)
                 .orElseThrow(() -> new EntityNotFoundException("운동일지 없음: " + logId));
 
-        checkOwner(log.getMember().getId()); // 🔒 본인 확인
+        checkWritePermission(log.getMember().getId()); // 🔒 수정 권한 확인
 
         log.setTitle(req.title());
         log.setContent(req.content());
@@ -77,7 +79,7 @@ public class WorkoutLogService {
             if (log.getMediaUrl() != null) {
                 fileStorage.delete(log.getMediaUrl());
             }
-            log.setMediaUrl(fileStorage.save(req.media())); // ✅ try/catch 제거
+            log.setMediaUrl(fileStorage.save(req.media()));
             log.setMediaType(getMediaType(req.media()));
         }
 
@@ -86,12 +88,12 @@ public class WorkoutLogService {
         return toRes(log);
     }
 
-    // ✅ 삭제 (본인만 가능)
+    // ✅ 삭제 (권한 체크)
     public void delete(Long logId) {
         WorkoutLog log = logRepo.findById(logId)
                 .orElseThrow(() -> new EntityNotFoundException("운동일지 없음: " + logId));
 
-        checkOwner(log.getMember().getId()); // 🔒 본인 확인
+        checkWritePermission(log.getMember().getId()); // 🔒 삭제 권한 확인
 
         if (log.getMediaUrl() != null) {
             fileStorage.delete(log.getMediaUrl());
@@ -102,8 +104,10 @@ public class WorkoutLogService {
         notiService.create(log.getMember().getId(), NotificationType.WARNING, "운동 기록이 삭제되었습니다.");
     }
 
+    // ✅ 조회 (권한 체크)
     @Transactional(readOnly = true)
     public List<WorkoutLogResponse> listByMember(Long memberId) {
+        checkReadPermission(memberId); // 🔒 조회 권한 확인
         return logRepo.findByMemberId(memberId).stream()
                 .map(this::toRes)
                 .toList();
@@ -111,8 +115,92 @@ public class WorkoutLogService {
 
     @Transactional(readOnly = true)
     public Page<WorkoutLogResponse> findAll(Pageable pageable) {
+        UserPrincipal user = getCurrentUser();
+        if (!user.isAdmin()) {
+            throw new AccessDeniedException("관리자만 전체 로그를 볼 수 있습니다.");
+        }
         return logRepo.findAll(pageable).map(this::toRes);
     }
+
+    @Transactional(readOnly = true)
+    public Page<WorkoutLogResponse> search(
+            String keyword,
+            Long memberId,
+            LocalDateTime fromDate,
+            LocalDateTime toDate,
+            String mediaType,
+            Pageable pageable
+    ) {
+        if (memberId != null) {
+            checkReadPermission(memberId); // 🔒 권한 체크
+        }
+        return logRepo.search(keyword, memberId, fromDate, toDate, mediaType, pageable)
+                .map(this::toRes);
+    }
+
+    // ========================
+    // 🔒 권한 체크 헬퍼
+    // ========================
+
+    /**
+     * 작성/수정/삭제 권한 체크: 본인 + 담당 트레이너 + 관리자
+     */
+    private void checkWritePermission(Long memberId) {
+        UserPrincipal user = getCurrentUser();
+        
+        // 관리자는 모든 회원의 로그 작성 가능
+        if (user.isAdmin()) return;
+        
+        // 본인은 자기 로그 작성 가능
+        if (user.getId().equals(memberId)) return;
+        
+        // 트레이너는 담당 회원의 로그 작성 가능
+        if (user.isTrainer()) {
+            Member member = memberRepo.findById(memberId)
+                    .orElseThrow(() -> new EntityNotFoundException("회원 없음: " + memberId));
+            if (member.getTrainer() != null && member.getTrainer().getId().equals(user.getId())) {
+                return;
+            }
+        }
+        
+        throw new AccessDeniedException("해당 회원의 운동 일지를 작성/수정/삭제할 권한이 없습니다.");
+    }
+
+    /**
+     * 조회 권한 체크: 본인 + 담당 트레이너 + 관리자
+     */
+    private void checkReadPermission(Long memberId) {
+        UserPrincipal user = getCurrentUser();
+        
+        // 관리자는 모든 회원의 로그 조회 가능
+        if (user.isAdmin()) return;
+        
+        // 본인은 자기 로그 조회 가능
+        if (user.getId().equals(memberId)) return;
+        
+        // 트레이너는 담당 회원의 로그 조회 가능
+        if (user.isTrainer()) {
+            Member member = memberRepo.findById(memberId)
+                    .orElseThrow(() -> new EntityNotFoundException("회원 없음: " + memberId));
+            if (member.getTrainer() != null && member.getTrainer().getId().equals(user.getId())) {
+                return;
+            }
+        }
+        
+        throw new AccessDeniedException("해당 회원의 운동 일지를 조회할 권한이 없습니다.");
+    }
+
+    private UserPrincipal getCurrentUser() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || !(auth.getPrincipal() instanceof UserPrincipal user)) {
+            throw new AccessDeniedException("인증이 필요합니다.");
+        }
+        return user;
+    }
+
+    // ========================
+    // 🔧 헬퍼 메서드
+    // ========================
 
     private WorkoutLogResponse toRes(WorkoutLog log) {
         String previewUrl = (log.getMediaUrl() != null)
@@ -134,29 +222,4 @@ public class WorkoutLogService {
         String contentType = file.getContentType();
         return (contentType != null && contentType.startsWith("video")) ? "VIDEO" : "IMAGE";
     }
-
-    // 🔒 본인 확인 로직
-    private void checkOwner(Long ownerId) {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        if (auth == null || !(auth.getPrincipal() instanceof UserPrincipal user)) {
-            throw new AccessDeniedException("인증이 필요합니다.");
-        }
-        if (!user.getId().equals(ownerId)) {
-            throw new AccessDeniedException("본인만 수정/삭제할 수 있습니다.");
-        }
-    }
-
-    @Transactional(readOnly = true)
-public Page<WorkoutLogResponse> search(
-        String keyword,
-        Long memberId,
-        LocalDateTime fromDate,
-        LocalDateTime toDate,
-        String mediaType,
-        Pageable pageable
-) {
-    return logRepo.search(keyword, memberId, fromDate, toDate, mediaType, pageable)
-            .map(this::toRes);
-}
-
 }
