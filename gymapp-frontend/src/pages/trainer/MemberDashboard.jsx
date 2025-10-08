@@ -14,6 +14,7 @@ const MemberDashboard = () => {
 
   useEffect(() => {
     fetchMemberData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [memberId]);
 
   const fetchMemberData = async () => {
