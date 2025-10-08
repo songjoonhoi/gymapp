@@ -12,6 +12,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -100,4 +101,20 @@ public class MemberController {
                                          @AuthenticationPrincipal UserPrincipal user) {
         return service.getTraineesWithPermission(trainerId, user);
     }
+
+    // ✅ (새로 추가) CSV 파일로 회원 일괄 등록
+    @PostMapping("/upload-csv")
+    @PreAuthorize("hasAnyRole('TRAINER', 'ADMIN')")
+    public void uploadCsv(@RequestParam("file") MultipartFile file,
+                          @AuthenticationPrincipal UserPrincipal user) {
+        try {
+            service.createMembersFromCsv(file, user);
+        } catch (Exception e) {
+            // 예외 처리 (실제 프로덕션에서는 더 정교한 예외 처리가 필요)
+            throw new RuntimeException("CSV 파일 업로드 및 처리 중 오류 발생: " + e.getMessage());
+        }
+    }
+
+    
 }
+

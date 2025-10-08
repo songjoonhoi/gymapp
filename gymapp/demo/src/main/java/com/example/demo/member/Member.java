@@ -20,7 +20,7 @@ import org.hibernate.annotations.Where;
 @Where(clause = "deleted_at IS NULL")
 public class Member extends BaseEntity {
 
-    @Column(nullable = false, length = 50)
+    @Column(nullable = false, length = 100)
     private String name;
 
     @Column(nullable = false, length = 120, unique = true)

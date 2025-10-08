@@ -7,6 +7,10 @@ import com.example.demo.member.dto.MemberCreateRequest;
 import com.example.demo.member.dto.MemberResponse;
 import com.example.demo.member.dto.MemberUpdateRequest;
 import com.example.demo.member.dto.PasswordChangeRequest;
+import com.opencsv.CSVReader;
+import com.opencsv.CSVReaderBuilder;
+import com.opencsv.exceptions.CsvException;
+
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -15,7 +19,12 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
+import java.io.Reader;
+import java.io.InputStreamReader;
+import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -182,4 +191,57 @@ public class MemberService {
                 .map(this::toRes)
                 .toList();
     }
+
+    // ✅ (수정) CSV 파일로 회원 일괄 등록
+    public void createMembersFromCsv(MultipartFile file, UserPrincipal user) throws IOException, CsvException {
+        // [수정] CSV 파일을 읽을 때 한글이 깨지지 않도록 'UTF-8' 인코딩을 명시합니다.
+        try (Reader reader = new InputStreamReader(file.getInputStream(), "UTF-8")) {
+            // CSV 파일 파서 생성 (첫 번째 줄은 헤더이므로 건너뜀)
+            CSVReader csvReader = new CSVReaderBuilder(reader)
+                    .withSkipLines(1)
+                    .build();
+
+            List<String[]> rows = csvReader.readAll();
+            List<Member> newMembers = new ArrayList<>();
+            Member trainer = find(user.getId()); // 파일을 업로드한 트레이너
+
+            for (String[] row : rows) {
+                // [수정] row 배열의 길이를 체크하여, 컬럼 수가 부족한 경우(빈 줄 등) 건너뛰도록 함
+                if (row.length < 4) {
+                    continue;
+                }
+                
+                // CSV 각 컬럼의 데이터 추출 (순서: 이름, 성별, 연령, 전화번호, 회원권, 가입일, 시작일)
+                String name = row[0];
+                String phone = row[3];
+
+                // 전화번호가 없거나, 이미 DB에 존재하면 건너뜀
+                if (phone == null || phone.trim().isEmpty() || repo.existsByPhone(phone)) {
+                    continue; // 중복 또는 유효하지 않은 데이터는 건너뜀
+                }
+                
+                // 임시 이메일과 비밀번호 생성 (전화번호 기반)
+                String tempEmail = phone + "@gymapp.com";
+                if(repo.existsByEmail(tempEmail)) {
+                    continue; // 임시 이메일도 중복되면 건너뜀
+                }
+
+                Member newMember = Member.builder()
+                        .name(name)
+                        .phone(phone)
+                        .email(tempEmail) // 필수값이므로 전화번호 기반 임시 이메일 부여
+                        .password(passwordEncoder.encode("1234")) // 임시 비밀번호 '1234'
+                        .role(Role.OT) // CSV로 등록된 회원은 기본적으로 '일반 회원(OT)'
+                        .status(UserStatus.ACTIVE)
+                        .trainer(trainer) // 담당 트레이너를 업로더로 자동 지정
+                        .build();
+
+                newMembers.add(newMember);
+            }
+
+            // 수집된 신규 회원 목록을 DB에 한 번에 저장
+            repo.saveAll(newMembers);
+        }
+    }
+
 }
