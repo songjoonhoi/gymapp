@@ -5,6 +5,7 @@ import com.example.demo.common.enums.Role;
 import com.example.demo.member.Member;
 import com.example.demo.member.MemberRepository;
 import com.example.demo.membership.dto.*;
+
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.AccessDeniedException;
@@ -20,6 +21,7 @@ public class MembershipService {
 
     private final MembershipRepository membershipRepository;
     private final MemberRepository memberRepository;
+    private final MembershipLogRepository membershipLogRepository;
 
     // ✅ 멤버십 조회 (권한 체크 포함)
     @Transactional(readOnly = true)
@@ -41,19 +43,28 @@ public class MembershipService {
         return register(memberId, req);
     }
 
+    // ✅ PT 세션 등록 (로직 변경)
     public MembershipResponse register(Long memberId, MembershipRegisterRequest req) {
         Member member = findMember(memberId);
-        Membership m = membershipRepository.findByMemberId(memberId).orElseGet(() -> {
-            Membership created = Membership.builder()
-                    .member(member)
-                    .ptTotal(0).ptUsed(0)
-                    .svcTotal(0).svcUsed(0)
-                    .build();
-            return membershipRepository.save(created);
-        });
+
+        // 1. 등록 내역(Log)을 먼저 생성하고 저장합니다.
+        MembershipLog log = MembershipLog.builder()
+                .member(member)
+                .ptSessionCount(req.addPT())
+                .serviceSessionCount(req.addService())
+                .paymentAmount(req.paymentAmount())
+                .startDate(req.startDate())
+                .endDate(req.endDate())
+                .build();
+        membershipLogRepository.save(log);
+
+        // 2. 회원별 누적 정보를 관리하는 Membership 엔티티를 찾아오거나 생성합니다.
+        Membership m = findOrCreate(memberId);
+        
+        // 3. 누적 정보에 이번 등록 내역을 합산합니다.
         m.addSessions(req.addPT(), req.addService(), req.startDate(), req.endDate());
 
-        // OT -> PT 자동 승급 (정규 PT가 하나라도 생기면)
+        // OT -> PT 자동 승급
         if (m.hasAnyPT() && member.getRole() == Role.OT) {
             member.setRole(Role.PT);
         }
@@ -209,4 +220,36 @@ public class MembershipService {
                 m.getStartDate(), m.getEndDate()
         );
     }
+
+     /**
+     * ✨ [수정] 특정 회원의 가장 최근 멤버십 요약 정보를 조회합니다.
+     * 이제 MembershipLog에서 직접 정보를 가져옵니다.
+     */
+    @Transactional(readOnly = true)
+    public PreviousMembershipSummaryResponse getLatestMembershipSummary(Long memberId) {
+        return membershipLogRepository.findTopByMemberIdOrderByCreatedAtDesc(memberId)
+                .map(latestLog -> new PreviousMembershipSummaryResponse(
+                        latestLog.getCreatedAt(),
+                        latestLog.getPtSessionCount(),
+                        latestLog.getServiceSessionCount(),
+                        latestLog.getPaymentAmount()
+                ))
+                .orElse(null);
+    }
+
+    /**
+     * ✨ [추가] 특정 회원의 모든 멤버십 등록 내역을 조회합니다.
+     */
+    @Transactional(readOnly = true)
+    public List<PreviousMembershipSummaryResponse> getMembershipLogs(Long memberId) {
+        return membershipLogRepository.findByMemberIdOrderByCreatedAtDesc(memberId).stream()
+                .map(log -> new PreviousMembershipSummaryResponse(
+                        log.getCreatedAt(),
+                        log.getPtSessionCount(),
+                        log.getServiceSessionCount(),
+                        log.getPaymentAmount()
+                ))
+                .toList();
+    }
+
 }

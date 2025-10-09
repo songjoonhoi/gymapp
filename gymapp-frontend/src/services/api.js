@@ -96,4 +96,14 @@ export const deleteDietComment = (logId, commentId) => {
   return apiClient.delete(`/diet-logs/${logId}/comments/${commentId}`);
 };
 
+// ✨ [추가] 특정 회원의 최근 멤버십 정보 조회
+export const getLatestMembershipSummary = (memberId) => {
+  return apiClient.get(`/memberships/member/${memberId}/latest-summary`);
+};
+
+// ✨ [추가] 특정 회원의 전체 멤버십 등록 내역 조회
+export const getMembershipLogs = (memberId) => {
+  return apiClient.get(`/memberships/member/${memberId}/logs`);
+};
+
 export default apiClient;

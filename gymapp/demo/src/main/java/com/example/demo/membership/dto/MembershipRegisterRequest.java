@@ -10,5 +10,5 @@ public record MembershipRegisterRequest(
         @NotNull @Min(0) Integer addService,
         LocalDate startDate,
         LocalDate endDate,
-        Integer amount // 추후 결제 테이블 분리 예정, 일단 보관용
+        int paymentAmount
 ) {}
