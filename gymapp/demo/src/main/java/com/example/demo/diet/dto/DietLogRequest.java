@@ -5,5 +5,6 @@ import org.springframework.web.multipart.MultipartFile;
 public record DietLogRequest(
         String title,
         String content,
-        MultipartFile media
+        MultipartFile media,
+        Long memberId 
 ) {}

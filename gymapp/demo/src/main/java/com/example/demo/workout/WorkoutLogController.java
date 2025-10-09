@@ -33,8 +33,11 @@ public class WorkoutLogController {
             @AuthenticationPrincipal UserPrincipal user,
             @ModelAttribute WorkoutLogRequest req
     ) {
-        //서비스 호출 시 user.getId() 사용
-        WorkoutLogResponse res = service.create(user.getId(), req);
+       // ✨ [핵심 수정] 트레이너가 보낸 memberId가 있으면 그것을 사용하고,
+        // 없으면(회원 본인이 작성) 로그인한 사용자 ID를 사용합니다.
+        Long targetMemberId = (req.memberId() != null) ? req.memberId() : user.getId();
+
+        WorkoutLogResponse res = service.create(targetMemberId, req);
         return ResponseEntity.status(HttpStatus.CREATED).body(res);
     }
 
@@ -74,7 +77,7 @@ public class WorkoutLogController {
                                      @RequestParam String title,
                                      @RequestParam String content,
                                      @RequestParam(required = false) MultipartFile media) {
-        return service.update(logId, new WorkoutLogRequest(title, content, media));
+        return service.update(logId, new WorkoutLogRequest(title, content, media,null));
     }
 
     // ✅ 삭제
