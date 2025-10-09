@@ -120,12 +120,26 @@ public class MemberService {
         return toRes(m);
     }
 
-    // ✅ 권한 포함 업데이트
+    // 권한 포함 업데이트
     public MemberResponse updateWithPermission(Long id, MemberUpdateRequest req, UserPrincipal user) {
-        if (user.isAdmin() || user.getId().equals(id)) {
+        // 1. 관리자는 모든 사용자 정보를 수정할 수 있습니다.
+        if (user.isAdmin()) {
             return update(id, req);
         }
-        throw new AccessDeniedException("본인만 수정할 수 있습니다.");
+        
+        // 2. 트레이너는 다른 사용자 정보를 수정할 수 있습니다 (예: 등급 변경).
+        if (user.isTrainer()) {
+            // (추가 개선 가능: 트레이너가 자신의 담당 회원만 수정하도록 제한할 수도 있습니다.)
+            return update(id, req);
+        }
+        
+        // 3. 일반 사용자는 자신의 정보만 수정할 수 있습니다.
+        if (user.getId().equals(id)) {
+            return update(id, req);
+        }
+
+        // 위 조건에 모두 해당하지 않으면 권한 없음 예외를 발생시킵니다.
+        throw new AccessDeniedException("회원 정보를 수정할 권한이 없습니다.");
     }
 
     // ✅ 소프트 삭제

@@ -7,8 +7,16 @@ import com.example.demo.admin.dto.MemberStatsResponse;
 import com.example.demo.admin.dto.MemberSummaryStatsResponse;
 import com.example.demo.diet.DietLogService;
 import lombok.RequiredArgsConstructor;
+
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+// import 추가
 import org.springframework.web.bind.annotation.*;
+import com.example.demo.auth.UserPrincipal; // import 추가
+import com.example.demo.common.enums.Role; // import 추가
+import org.springframework.security.core.annotation.AuthenticationPrincipal; // import 추가
+
+import java.util.Map; // import 추가
 
 import java.util.List;
 
@@ -63,6 +71,19 @@ public class AdminController {
     @GetMapping("/member-log-stats")
     public List<MemberStatsResponse> getMemberLogStats() {
         return adminService.getMemberLogStats();
+    }
+
+    // ✨ 회원 등급 변경 API 추가
+    @PutMapping("/members/{id}/role")
+    @PreAuthorize("hasAnyRole('ADMIN', 'TRAINER')") // 관리자 또는 트레이너만 호출 가능
+    public ResponseEntity<Void> updateMemberRole(
+            @PathVariable("id") Long memberId,
+            @RequestBody Map<String, String> payload,
+            @AuthenticationPrincipal UserPrincipal currentUser
+    ) {
+        Role newRole = Role.valueOf(payload.get("role").toUpperCase());
+        adminService.updateMemberRole(memberId, newRole, currentUser);
+        return ResponseEntity.ok().build();
     }
 
 }

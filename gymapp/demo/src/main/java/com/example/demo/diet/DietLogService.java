@@ -39,7 +39,7 @@ public class DietLogService {
 
     // ✅ 생성
     public DietLogResponse create(Long memberId, DietLogRequest req) {
-        checkPermission(memberId); // 🔒 생성 권한 확인
+        checkWritePermission(memberId); // 🔒 작성 권한 확인
 
         Member member = memberRepo.findById(memberId)
                 .orElseThrow(() -> new EntityNotFoundException("회원 없음: " + memberId));
@@ -50,25 +50,24 @@ public class DietLogService {
 
         if (file != null && !file.isEmpty()) {
             mediaUrl = fileStorage.save(file);
-            String contentType = file.getContentType();
-            mediaType = (contentType != null && contentType.startsWith("video")) ? "VIDEO" : "IMAGE";
+            mediaType = getMediaType(file);
         }
 
-        // ✅ AI 분석
+        // AI 분석 (코드는 기존과 동일하여 생략)
         Integer calories = null;
         String aiCalories = null;
         String aiNutrition = null;
         if (mediaUrl != null && "IMAGE".equals(mediaType)) {
-            try {
-                var aiResult = aiService.analyzeFood(mediaUrl);
-                aiCalories = aiResult.getOrDefault("calories", "0").toString();
-                calories = Integer.parseInt(aiCalories.replaceAll("[^0-9]", ""));
-                aiNutrition = aiResult.getOrDefault("nutrition", "분석 실패").toString();
-            } catch (Exception e) {
-                calories = null;
-                aiCalories = "분석 오류";
-                aiNutrition = "분석 오류";
-            }
+             try {
+                 var aiResult = aiService.analyzeFood(mediaUrl);
+                 aiCalories = aiResult.getOrDefault("calories", "0").toString();
+                 calories = Integer.parseInt(aiCalories.replaceAll("[^0-9]", ""));
+                 aiNutrition = aiResult.getOrDefault("nutrition", "분석 실패").toString();
+             } catch (Exception e) {
+                 calories = null;
+                 aiCalories = "분석 오류";
+                 aiNutrition = "분석 오류";
+             }
         }
 
         DietLog log = DietLog.builder()
@@ -81,30 +80,15 @@ public class DietLogService {
                 .build();
 
         logRepo.save(log);
-
-        // 🔔 알림
         notiService.create(memberId, NotificationType.SUCCESS, "식단 기록이 작성되었습니다!");
-
-        return new DietLogResponse(
-                log.getId(),
-                log.getMember().getId(),
-                log.getTitle(),
-                log.getContent(),
-                mediaUrl,
-                mediaType,
-                log.getCalories(),
-                aiCalories,
-                aiNutrition,
-                log.getCreatedAt()
-        );
+        return toRes(log); // toRes로 응답 생성 단순화
     }
 
     // ✅ 수정
     public DietLogResponse update(Long logId, DietLogRequest req) {
         DietLog log = logRepo.findById(logId)
                 .orElseThrow(() -> new EntityNotFoundException("식단일지 없음: " + logId));
-
-        checkPermission(log.getMember().getId()); // 🔒 수정 권한 확인
+        checkWritePermission(log.getMember().getId()); // 🔒 수정 권한 확인
 
         log.setTitle(req.title());
         log.setContent(req.content());
@@ -125,21 +109,19 @@ public class DietLogService {
     public void delete(Long logId) {
         DietLog log = logRepo.findById(logId)
                 .orElseThrow(() -> new EntityNotFoundException("식단일지 없음: " + logId));
-
-        checkPermission(log.getMember().getId()); // 🔒 삭제 권한 확인
+        checkWritePermission(log.getMember().getId()); // 🔒 삭제 권한 확인
 
         if (log.getMediaUrl() != null) {
             fileStorage.delete(log.getMediaUrl());
         }
         logRepo.delete(log);
-
         notiService.create(log.getMember().getId(), NotificationType.WARNING, "식단 기록이 삭제되었습니다.");
     }
 
     // ✅ 회원별 조회
     @Transactional(readOnly = true)
     public List<DietLogResponse> listByMember(Long memberId) {
-        checkPermission(memberId); // 🔒 조회 권한 확인
+        checkReadPermission(memberId); // [수정] 🔒 조회 권한 확인
         return logRepo.findByMemberId(memberId).stream()
                 .map(this::toRes)
                 .toList();
@@ -155,18 +137,13 @@ public class DietLogService {
         return logRepo.findAll(pageable).map(this::toRes);
     }
 
-    // ✅ 검색/필터링 (조회 권한 적용)
+    // ✅ 검색/필터링
     @Transactional(readOnly = true)
     public Page<DietLogResponse> search(
-            String keyword,
-            Long memberId,
-            LocalDateTime fromDate,
-            LocalDateTime toDate,
-            String mediaType,
-            Pageable pageable
+            String keyword, Long memberId, LocalDateTime fromDate, LocalDateTime toDate, String mediaType, Pageable pageable
     ) {
         if (memberId != null) {
-            checkPermission(memberId); // 🔒 권한 체크 추가
+            checkReadPermission(memberId); // 🔒 권한 체크
         }
         return logRepo.search(keyword, memberId, fromDate, toDate, mediaType, pageable)
                 .map(this::toRes);
@@ -175,20 +152,52 @@ public class DietLogService {
     // ========================
     // 🔒 권한 체크 헬퍼
     // ========================
-    private void checkPermission(Long ownerId) {
-        UserPrincipal user = getCurrentUser();
 
-        if (user.isAdmin()) return; // 전체 접근 가능
+    /**
+     * 작성/수정/삭제 권한 체크: PT 회원 본인 + 담당 트레이너 + 관리자
+     */
+    public void checkWritePermission(Long ownerId) {
+        UserPrincipal user = getCurrentUser();
+        if (user.isAdmin()) return; // 관리자 전체 허용
+
+        Member member = memberRepo.findById(ownerId)
+                .orElseThrow(() -> new EntityNotFoundException("회원 없음: " + ownerId));
+
+        // 담당 트레이너 허용
+        if (user.isTrainer()) {
+            if (member.getTrainer() != null && member.getTrainer().getId().equals(user.getId())) {
+                return;
+            }
+        }
+
+        // PT 회원 본인 허용
+        if (user.getId().equals(ownerId)) {
+            if (member.getRole() == Role.PT) {
+                return;
+            }
+            throw new AccessDeniedException("PT 회원만 식단 기록을 작성/수정/삭제할 수 있습니다.");
+        }
+
+        throw new AccessDeniedException("해당 회원의 로그에 접근할 수 없습니다.");
+    }
+
+    /**
+     * 조회 권한 체크: 본인 + 담당 트레이너 + 관리자
+     */
+    public void checkReadPermission(Long ownerId) {
+        UserPrincipal user = getCurrentUser();
+        if (user.isAdmin()) return; // 관리자 전체 허용
+        if (user.getId().equals(ownerId)) return; // 본인 허용 (OT, PT 모두)
+
         if (user.isTrainer()) {
             Member member = memberRepo.findById(ownerId)
                     .orElseThrow(() -> new EntityNotFoundException("회원 없음: " + ownerId));
             if (member.getTrainer() != null && member.getTrainer().getId().equals(user.getId())) {
-                return; // 담당 트레이너라면 허용
+                return; // 담당 트레이너 허용
             }
         }
-        if (user.getId().equals(ownerId)) return; // 본인 허용
 
-        throw new AccessDeniedException("해당 회원의 로그에 접근할 수 없습니다.");
+        throw new AccessDeniedException("해당 회원의 로그를 조회할 권한이 없습니다.");
     }
 
     private UserPrincipal getCurrentUser() {
@@ -198,54 +207,33 @@ public class DietLogService {
         }
         return user;
     }
-
-    private DietLogResponse toRes(DietLog log) {
-        String previewUrl = (log.getMediaUrl() != null)
-                ? "/api/diet-logs/" + log.getId() + "/media"
-                : null;
-
-        return new DietLogResponse(
-                log.getId(),
-                log.getMember().getId(),
-                log.getTitle(),
-                log.getContent(),
-                previewUrl,
-                log.getMediaType(),
-                log.getCalories(),
-                null,
-                null,
-                log.getCreatedAt()
-        );
-    }
-
-    private String getMediaType(MultipartFile file) {
-        String contentType = file.getContentType();
-        return (contentType != null && contentType.startsWith("video")) ? "VIDEO" : "IMAGE";
-    }
-
-    // ✅ 칼로리 합계 관련 메서드
+    
+    // ========================
+    // 🧮 칼로리 계산 메서드
+    // ========================
+    
     @Transactional(readOnly = true)
     public int getTotalCalories(Long memberId) {
-        checkPermission(memberId);
+        checkReadPermission(memberId); // [수정] 🔒 조회 권한 확인
         return logRepo.findTotalCalories(memberId);
     }
 
     @Transactional(readOnly = true)
     public int getCaloriesForPeriod(Long memberId, LocalDateTime start, LocalDateTime end) {
-        checkPermission(memberId);
+        checkReadPermission(memberId); // [수정] 🔒 조회 권한 확인
         return logRepo.findCaloriesBetween(memberId, start, end);
     }
 
     @Transactional(readOnly = true)
     public int getCaloriesToday(Long memberId) {
-        checkPermission(memberId);
+        checkReadPermission(memberId); // [수정] 🔒 조회 권한 확인
         LocalDate today = LocalDate.now();
         return logRepo.findCaloriesBetween(memberId, today.atStartOfDay(), today.atTime(LocalTime.MAX));
     }
 
     @Transactional(readOnly = true)
     public int getCaloriesThisWeek(Long memberId) {
-        checkPermission(memberId);
+        checkReadPermission(memberId); // [수정] 🔒 조회 권한 확인
         LocalDate today = LocalDate.now();
         LocalDate startOfWeek = today.with(java.time.DayOfWeek.MONDAY);
         LocalDate endOfWeek = today.with(java.time.DayOfWeek.SUNDAY);
@@ -254,10 +242,35 @@ public class DietLogService {
 
     @Transactional(readOnly = true)
     public int getCaloriesThisMonth(Long memberId) {
-        checkPermission(memberId);
+        checkReadPermission(memberId); // [수정] 🔒 조회 권한 확인
         LocalDate today = LocalDate.now();
         LocalDate firstDay = today.withDayOfMonth(1);
         LocalDate lastDay = today.withDayOfMonth(today.lengthOfMonth());
         return logRepo.findCaloriesBetween(memberId, firstDay.atStartOfDay(), lastDay.atTime(LocalTime.MAX));
+    }
+
+    // ========================
+    // ⚙️ 유틸리티 메서드
+    // ========================
+
+    private DietLogResponse toRes(DietLog log) {
+        // AI 분석 결과는 create 시에만 포함되므로, 조회 시에는 null로 처리하거나 필요 시 별도 로직 추가
+        return new DietLogResponse(
+                log.getId(),
+                log.getMember().getId(),
+                log.getTitle(),
+                log.getContent(),
+                log.getMediaUrl(),
+                log.getMediaType(),
+                log.getCalories(),
+                null, // aiCalories
+                null, // aiNutrition
+                log.getCreatedAt()
+        );
+    }
+
+    private String getMediaType(MultipartFile file) {
+        String contentType = file.getContentType();
+        return (contentType != null && contentType.startsWith("video")) ? "VIDEO" : "IMAGE";
     }
 }

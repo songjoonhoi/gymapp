@@ -22,9 +22,14 @@ import Notifications from './pages/member/Notifications';
 import Membership from './pages/member/Membership';
 
 
+
 // Trainer
 import TrainerMembers from './pages/trainer/TrainerMembers';
 import MemberDashboard from './pages/trainer/MemberDashboard';
+import MemberWorkoutList from './pages/trainer/MemberWorkoutList';
+import MemberWorkoutCreate from './pages/trainer/MemberWorkoutCreate';
+import MemberWorkoutDetail from './pages/trainer/MemberWorkoutDetail';
+import MemberWorkoutEdit from './pages/trainer/MemberWorkoutEdit';
 
 function App() {
   return (
@@ -54,6 +59,10 @@ function App() {
           {/* Trainer Routes */}
           <Route path="/trainer/members" element={<TrainerMembers />} />
           <Route path="/trainer/members/:memberId" element={<MemberDashboard />} />
+          <Route path="/trainer/members/:memberId/workout" element={<MemberWorkoutList />} />
+          <Route path="/trainer/members/:memberId/workout/create" element={<MemberWorkoutCreate />} />
+          <Route path="/trainer/members/:memberId/workout/:workoutId" element={<MemberWorkoutDetail />} />
+          <Route path="/trainer/members/:memberId/workout/edit/:workoutId" element={<MemberWorkoutEdit />} />
         </Routes>
       </div>
     </Router>

@@ -12,6 +12,11 @@ import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.example.demo.auth.UserPrincipal; 
+import com.example.demo.common.enums.Role; 
+import org.springframework.security.access.AccessDeniedException; 
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder; 
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -24,6 +29,26 @@ public class AdminService {
     private final MemberRepository memberRepo;
     private final WorkoutLogRepository workoutLogRepo;
     private final DietLogRepository dietLogRepo;
+
+    //  회원 등급 변경 (PT 등급업)
+    public void updateMemberRole(Long memberId, Role newRole, UserPrincipal currentUser) {
+        if (!currentUser.isAdmin() && !currentUser.isTrainer()) {
+            throw new AccessDeniedException("회원 등급을 수정할 권한이 없습니다.");
+        }
+
+        Member member = memberRepo.findById(memberId)
+                .orElseThrow(() -> new EntityNotFoundException("회원이 없습니다: " + memberId));
+
+        // 트레이너는 자신의 담당 회원 등급만 변경 가능하도록 제한 (선택적)
+        if (currentUser.isTrainer() && !currentUser.isAdmin()) {
+            if (member.getTrainer() == null || !member.getTrainer().getId().equals(currentUser.getId())) {
+                throw new AccessDeniedException("자신의 담당 회원이 아닙니다.");
+            }
+        }
+        
+        member.setRole(newRole);
+    }
+
 
     // ✅ 모든 회원 조회
     public List<MemberResponse> getAllMembers() {

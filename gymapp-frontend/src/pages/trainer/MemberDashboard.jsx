@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import BottomNav from '../../components/BottomNav';
 import Card from '../../components/Card';
+import Button from '../../components/Button';
 import api from '../../services/api';
 
 const MemberDashboard = () => {
@@ -19,15 +20,12 @@ const MemberDashboard = () => {
 
   const fetchMemberData = async () => {
     try {
-      // 회원 정보
       const memberResponse = await api.get(`/members/${memberId}`);
       setMember(memberResponse.data);
 
-      // 멤버십 정보
       const membershipResponse = await api.get(`/memberships/${memberId}`);
       setMembership(membershipResponse.data);
 
-      // 통계 정보
       const statsResponse = await api.get(`/stats/${memberId}`);
       setStats(statsResponse.data);
     } catch (error) {
@@ -36,6 +34,25 @@ const MemberDashboard = () => {
       navigate('/trainer/members');
     } finally {
       setLoading(false);
+    }
+  };
+
+  // 등급 변경 핸들러 추가
+  const handleRoleChange = async () => {
+    const newRole = member.role === 'OT' ? 'PT' : 'OT';
+    const confirmMessage = member.role === 'OT' 
+      ? 'PT 회원으로 전환하시겠습니까?' 
+      : '일반 회원으로 전환하시겠습니까?';
+    
+    if (!window.confirm(confirmMessage)) return;
+
+    try {
+      await api.put(`/admin/members/${memberId}/role`, { role: newRole });
+      alert('등급이 변경되었습니다.');
+      fetchMemberData(); // 새로고침
+    } catch (error) {
+      alert('등급 변경에 실패했습니다.');
+      console.error(error);
     }
   };
 
@@ -72,7 +89,7 @@ const MemberDashboard = () => {
             </div>
           </div>
           
-          <div className="flex gap-2">
+          <div className="flex gap-2 mb-4">
             <span className={`inline-block px-3 py-1 rounded-lg text-sm font-semibold ${
               member?.role === 'PT' 
                 ? 'bg-blue-100 text-blue-700' 
@@ -88,6 +105,15 @@ const MemberDashboard = () => {
               {member?.status === 'ACTIVE' ? '활성' : '비활성'}
             </span>
           </div>
+
+          {/* 등급 변경 버튼 추가 */}
+          <Button 
+            fullWidth 
+            variant="secondary"
+            onClick={handleRoleChange}
+          >
+            {member?.role === 'OT' ? 'PT 회원으로 전환' : '일반 회원으로 전환'}
+          </Button>
         </div>
 
         {/* 멤버십 정보 (PT 회원만) */}
@@ -147,8 +173,8 @@ const MemberDashboard = () => {
                   🥗
                 </div>
                 <div>
-                  <h3 className="font-bold text-gray-800">식단 기록 관리</h3>
-                  <p className="text-xs text-gray-500">조회 및 작성</p>
+                  <h3 className="font-bold text-gray-800">식단 기록 조회</h3>
+                  <p className="text-xs text-gray-500">회원 식단 확인</p>
                 </div>
               </div>
               <span className="text-gray-400">→</span>

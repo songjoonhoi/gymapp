@@ -8,9 +8,13 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import com.example.demo.auth.UserPrincipal;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -23,13 +27,15 @@ public class DietLogController {
     private final DietLogService service;
 
     // ✅ 생성 (회원/트레이너/관리자)
+    @PostMapping // ✨ [수정] URL에서 "/{memberId}" 제거
     @PreAuthorize("hasAnyRole('OT','PT','TRAINER','ADMIN')")
-    @PostMapping("/{memberId}")
-    public DietLogResponse create(@PathVariable Long memberId,
-                                  @RequestParam String title,
-                                  @RequestParam String content,
-                                  @RequestParam(required = false) MultipartFile media) {
-        return service.create(memberId, new DietLogRequest(title, content, media));
+    public ResponseEntity<DietLogResponse> create(
+            @AuthenticationPrincipal UserPrincipal user,
+            @ModelAttribute DietLogRequest req
+    ) {
+        //서비스 호출 시 user.getId() 사용
+        DietLogResponse res = service.create(user.getId(), req);
+        return ResponseEntity.status(HttpStatus.CREATED).body(res);
     }
 
     // ✅ 회원별 조회 (권한 체크는 Service에서)

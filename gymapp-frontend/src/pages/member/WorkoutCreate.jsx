@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Button from '../../components/Button';
 import Input from '../../components/Input';
@@ -13,6 +13,15 @@ const WorkoutCreate = () => {
   const [media, setMedia] = useState(null);
   const [preview, setPreview] = useState(null);
   const [loading, setLoading] = useState(false);
+
+  //페이지 로드 시 PT 회원인지 확인
+    useEffect(() => {
+        const user = JSON.parse(localStorage.getItem('user'));
+        if (user && user.role === 'OT') {
+            alert('등록은 PT회원만 할수 있습니다.');
+            navigate(-1); // 이전 페이지로 돌아가기
+        }
+    }, [navigate]);
 
   const handleChange = (e) => {
     setFormData({
@@ -46,7 +55,7 @@ const WorkoutCreate = () => {
         formDataToSend.append('media', media);
       }
 
-      await api.post(`/workout-logs/${user.memberId}`, formDataToSend, {
+      await api.post('/workout-logs', formDataToSend, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },

@@ -1,6 +1,7 @@
 package com.example.demo.workout;
 
 import com.example.demo.auth.UserPrincipal;
+import com.example.demo.common.enums.Role;
 import com.example.demo.member.Member;
 import com.example.demo.member.MemberRepository;
 import com.example.demo.notification.NotificationService;
@@ -146,49 +147,56 @@ public class WorkoutLogService {
      * 작성/수정/삭제 권한 체크: 본인 + 담당 트레이너 + 관리자
      */
     private void checkWritePermission(Long memberId) {
-        UserPrincipal user = getCurrentUser();
-        
-        // 관리자는 모든 회원의 로그 작성 가능
-        if (user.isAdmin()) return;
-        
-        // 본인은 자기 로그 작성 가능
-        if (user.getId().equals(memberId)) return;
-        
-        // 트레이너는 담당 회원의 로그 작성 가능
-        if (user.isTrainer()) {
-            Member member = memberRepo.findById(memberId)
-                    .orElseThrow(() -> new EntityNotFoundException("회원 없음: " + memberId));
-            if (member.getTrainer() != null && member.getTrainer().getId().equals(user.getId())) {
-                return;
-            }
+    UserPrincipal user = getCurrentUser();
+    
+    // 관리자는 모든 회원의 로그 작성 가능
+    if (user.isAdmin()) return;
+    
+    // 담당 트레이너는 담당 회원의 로그 작성 가능
+    if (user.isTrainer()) {
+        Member member = memberRepo.findById(memberId)
+                .orElseThrow(() -> new EntityNotFoundException("회원 없음: " + memberId));
+        if (member.getTrainer() != null && member.getTrainer().getId().equals(user.getId())) {
+            return;
         }
-        
-        throw new AccessDeniedException("해당 회원의 운동 일지를 작성/수정/삭제할 권한이 없습니다.");
     }
+    
+    // ✅ PT 회원 본인만 자기 로그 작성 가능 (OT는 불가)
+    if (user.getId().equals(memberId)) {
+        Member member = memberRepo.findById(memberId)
+                .orElseThrow(() -> new EntityNotFoundException("회원 없음: " + memberId));
+        if (member.getRole() == Role.PT) {
+            return;
+        }
+        throw new AccessDeniedException("PT 회원만 운동 기록을 작성/수정/삭제할 수 있습니다.");
+    }
+    
+    throw new AccessDeniedException("해당 회원의 운동 일지를 작성/수정/삭제할 권한이 없습니다.");
+}
 
-    /**
-     * 조회 권한 체크: 본인 + 담당 트레이너 + 관리자
-     */
-    private void checkReadPermission(Long memberId) {
-        UserPrincipal user = getCurrentUser();
-        
-        // 관리자는 모든 회원의 로그 조회 가능
-        if (user.isAdmin()) return;
-        
-        // 본인은 자기 로그 조회 가능
-        if (user.getId().equals(memberId)) return;
-        
-        // 트레이너는 담당 회원의 로그 조회 가능
-        if (user.isTrainer()) {
-            Member member = memberRepo.findById(memberId)
-                    .orElseThrow(() -> new EntityNotFoundException("회원 없음: " + memberId));
-            if (member.getTrainer() != null && member.getTrainer().getId().equals(user.getId())) {
-                return;
-            }
+/**
+ * 조회 권한 체크: 본인 + 담당 트레이너 + 관리자
+ */
+private void checkReadPermission(Long memberId) {
+    UserPrincipal user = getCurrentUser();
+    
+    // 관리자는 모든 회원의 로그 조회 가능
+    if (user.isAdmin()) return;
+    
+    // 본인은 자기 로그 조회 가능 (OT, PT 모두)
+    if (user.getId().equals(memberId)) return;
+    
+    // 트레이너는 담당 회원의 로그 조회 가능
+    if (user.isTrainer()) {
+        Member member = memberRepo.findById(memberId)
+                .orElseThrow(() -> new EntityNotFoundException("회원 없음: " + memberId));
+        if (member.getTrainer() != null && member.getTrainer().getId().equals(user.getId())) {
+            return;
         }
-        
-        throw new AccessDeniedException("해당 회원의 운동 일지를 조회할 권한이 없습니다.");
     }
+    
+    throw new AccessDeniedException("해당 회원의 운동 일지를 조회할 권한이 없습니다.");
+}
 
     private UserPrincipal getCurrentUser() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
