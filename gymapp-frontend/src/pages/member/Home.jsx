@@ -8,6 +8,7 @@ const Home = () => {
   const navigate = useNavigate();
   const [user, setUser] = useState(null);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [alertCount, setAlertCount] = useState(0);
 
   useEffect(() => {
     const userData = localStorage.getItem('user');
@@ -18,6 +19,10 @@ const Home = () => {
     const parsedUser = JSON.parse(userData);
     setUser(parsedUser);
     fetchUnreadCount();
+    
+    if (parsedUser.role === 'TRAINER') {
+      fetchAlertCount();
+    }
   }, [navigate]);
 
   const fetchUnreadCount = async () => {
@@ -25,6 +30,15 @@ const Home = () => {
       const userData = JSON.parse(localStorage.getItem('user'));
       const response = await api.get(`/notifications/${userData.memberId}/unread-count`);
       setUnreadCount(response.data);
+    } catch (error) {
+      console.error('알림 개수 조회 실패:', error);
+    }
+  };
+
+  const fetchAlertCount = async () => {
+    try {
+      const response = await api.get('/memberships/alerts?threshold=4');
+      setAlertCount(response.data.length);
     } catch (error) {
       console.error('알림 개수 조회 실패:', error);
     }
@@ -69,6 +83,22 @@ const Home = () => {
         {/* 트레이너 전용 화면 */}
         {isTrainer ? (
           <>
+            {/* PT 세션 현황 카드 */}
+            <Card onClick={() => navigate('/trainer/pt-sessions')} className="cursor-pointer hover:shadow-lg transition-shadow">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center">
+                  <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center text-2xl mr-4">
+                    📋
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold text-gray-800">PT 세션 현황</h3>
+                    <p className="text-sm text-gray-500">전체 PT 회원 세션</p>
+                  </div>
+                </div>
+                <span className="text-gray-400">→</span>
+              </div>
+            </Card>
+
             {/* 담당 회원 카드 */}
             <Card onClick={() => navigate('/trainer/members')} className="cursor-pointer hover:shadow-lg transition-shadow">
               <div className="flex items-center justify-between">
@@ -85,11 +115,34 @@ const Home = () => {
               </div>
             </Card>
 
+            {/* 세션 알림 카드 */}
+            <Card onClick={() => navigate('/trainer/membership-alerts')} className="cursor-pointer hover:shadow-lg transition-shadow">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center">
+                  <div className="w-12 h-12 bg-red-100 rounded-xl flex items-center justify-center text-2xl mr-4">
+                    🔔
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold text-gray-800">세션 알림</h3>
+                    <p className="text-sm text-gray-500">잔여 세션 4회 이하</p>
+                  </div>
+                </div>
+                <div className="flex items-center">
+                  {alertCount > 0 && (
+                    <span className="bg-red-500 text-white text-sm px-3 py-1 rounded-full font-semibold mr-2">
+                      {alertCount}
+                    </span>
+                  )}
+                  <span className="text-gray-400">→</span>
+                </div>
+              </div>
+            </Card>
+
             {/* 트레이너 통계 카드 */}
             <Card onClick={() => navigate('/trainer/statistics')} className="cursor-pointer hover:shadow-lg transition-shadow">
               <div className="flex items-center justify-between">
                 <div className="flex items-center">
-                  <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center text-2xl mr-4">
+                  <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center text-2xl mr-4">
                     📊
                   </div>
                   <div>

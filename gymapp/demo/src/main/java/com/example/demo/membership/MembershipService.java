@@ -94,7 +94,14 @@ public class MembershipService {
     @Transactional(readOnly = true)
     public List<LowRemainItem> lowRemainList(int threshold) {
         return membershipRepository.findAll().stream()
-                .filter(m -> m.isLowRemain(threshold))
+                .filter(m -> {
+                    // ✅ PT 회원만 필터링 (OT 제외)
+                    if (m.getMember().getRole() != Role.PT) {
+                        return false;
+                    }
+                    // ✅ 잔여 PT가 threshold 이하인 회원 (0 포함)
+                    return m.remainPT() <= threshold;
+                })
                 .map(m -> new LowRemainItem(
                         m.getMember().getId(),
                         m.getMember().getName(),
@@ -109,9 +116,16 @@ public class MembershipService {
         return membershipRepository.findAll().stream()
                 .filter(m -> {
                     Member member = m.getMember();
-                    return member.getTrainer() != null && 
-                           member.getTrainer().getId().equals(trainerId) &&
-                           m.isLowRemain(threshold);
+                    // ✅ PT 회원만 필터링
+                    if (member.getRole() != Role.PT) {
+                        return false;
+                    }
+                    // ✅ 담당 트레이너인지 확인
+                    if (member.getTrainer() == null || !member.getTrainer().getId().equals(trainerId)) {
+                        return false;
+                    }
+                    // ✅ 잔여 PT가 threshold 이하인 회원 (0 포함)
+                    return m.remainPT() <= threshold;
                 })
                 .map(m -> new LowRemainItem(
                         m.getMember().getId(),

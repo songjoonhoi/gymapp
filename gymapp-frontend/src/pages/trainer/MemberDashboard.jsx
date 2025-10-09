@@ -37,7 +37,7 @@ const MemberDashboard = () => {
     }
   };
 
-  // 등급 변경 핸들러 추가
+  // 등급 변경 핸들러
   const handleRoleChange = async () => {
     const newRole = member.role === 'OT' ? 'PT' : 'OT';
     const confirmMessage = member.role === 'OT' 
@@ -49,7 +49,7 @@ const MemberDashboard = () => {
     try {
       await api.put(`/admin/members/${memberId}/role`, { role: newRole });
       alert('등급이 변경되었습니다.');
-      fetchMemberData(); // 새로고침
+      fetchMemberData();
     } catch (error) {
       alert('등급 변경에 실패했습니다.');
       console.error(error);
@@ -76,7 +76,7 @@ const MemberDashboard = () => {
 
       {/* Content */}
       <div className="max-w-lg mx-auto px-4 py-6 space-y-4">
-        {/* 회원 프로필 카드 */}
+        {/* 1. 회원 프로필 카드 */}
         <div className="bg-white rounded-2xl shadow-md p-6">
           <div className="flex items-center mb-4">
             <div className="w-16 h-16 bg-primary rounded-full flex items-center justify-center text-white text-2xl font-bold mr-4">
@@ -106,7 +106,6 @@ const MemberDashboard = () => {
             </span>
           </div>
 
-          {/* 등급 변경 버튼 추가 */}
           <Button 
             fullWidth 
             variant="secondary"
@@ -116,7 +115,7 @@ const MemberDashboard = () => {
           </Button>
         </div>
 
-        {/* 멤버십 정보 (PT 회원만) */}
+        {/* 2. 멤버십 정보 (PT 회원만) */}
         {member?.role === 'PT' && membership && (
           <div className="bg-gradient-to-br from-primary to-blue-600 text-white rounded-2xl p-5 shadow-lg">
             <p className="text-sm opacity-90 mb-1">잔여 PT 세션</p>
@@ -134,7 +133,34 @@ const MemberDashboard = () => {
           </div>
         )}
 
-        {/* 통계 카드 */}
+        {/* 3. 멤버십 관리 버튼 (2칸 그리드) */}
+        <div className="space-y-3">
+          <h2 className="text-lg font-bold text-gray-800 px-1">멤버십 관리</h2>
+          
+          <div className="grid grid-cols-2 gap-3">
+            <Card onClick={() => navigate(`/trainer/members/${memberId}/membership/register`)}>
+              <div className="text-center py-2">
+                <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center text-2xl mx-auto mb-2">
+                  ➕
+                </div>
+                <h3 className="font-bold text-gray-800 text-sm">PT 세션 등록</h3>
+                <p className="text-xs text-gray-500 mt-1">세션 추가</p>
+              </div>
+            </Card>
+
+            <Card onClick={() => navigate(`/trainer/members/${memberId}/membership/decrement`)}>
+              <div className="text-center py-2">
+                <div className="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center text-2xl mx-auto mb-2">
+                  ➖
+                </div>
+                <h3 className="font-bold text-gray-800 text-sm">PT 세션 차감</h3>
+                <p className="text-xs text-gray-500 mt-1">세션 사용</p>
+              </div>
+            </Card>
+          </div>
+        </div>
+
+        {/* 4. 통계 카드 */}
         <div className="grid grid-cols-2 gap-4">
           <div className="bg-white rounded-2xl shadow-md p-5">
             <p className="text-sm text-gray-500 mb-2">🏋️ 운동 기록</p>
@@ -149,8 +175,10 @@ const MemberDashboard = () => {
           </div>
         </div>
 
-        {/* 기록 관리 버튼 */}
+        {/* 5. 기록 관리 버튼 */}
         <div className="space-y-3">
+          <h2 className="text-lg font-bold text-gray-800 px-1">기록 관리</h2>
+          
           <Card onClick={() => navigate(`/trainer/members/${memberId}/workout`)}>
             <div className="flex items-center justify-between">
               <div className="flex items-center">
@@ -173,8 +201,8 @@ const MemberDashboard = () => {
                   🥗
                 </div>
                 <div>
-                  <h3 className="font-bold text-gray-800">식단 기록 조회</h3>
-                  <p className="text-xs text-gray-500">회원 식단 확인</p>
+                  <h3 className="font-bold text-gray-800">식단 기록 관리</h3>
+                  <p className="text-xs text-gray-500">조회 및 코멘트</p>
                 </div>
               </div>
               <span className="text-gray-400">→</span>

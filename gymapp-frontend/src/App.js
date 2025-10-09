@@ -30,6 +30,12 @@ import MemberWorkoutList from './pages/trainer/MemberWorkoutList';
 import MemberWorkoutCreate from './pages/trainer/MemberWorkoutCreate';
 import MemberWorkoutDetail from './pages/trainer/MemberWorkoutDetail';
 import MemberWorkoutEdit from './pages/trainer/MemberWorkoutEdit';
+import MemberDietList from './pages/trainer/MemberDietList';
+import MemberDietDetail from './pages/trainer/MemberDietDetail';
+import MembershipRegister from './pages/trainer/MembershipRegister';
+   import MembershipDecrement from './pages/trainer/MembershipDecrement';
+   import MembershipAlerts from './pages/trainer/MembershipAlerts';
+   import PTSessionOverview from './pages/trainer/PTSessionOverview';
 
 function App() {
   return (
@@ -63,6 +69,12 @@ function App() {
           <Route path="/trainer/members/:memberId/workout/create" element={<MemberWorkoutCreate />} />
           <Route path="/trainer/members/:memberId/workout/:workoutId" element={<MemberWorkoutDetail />} />
           <Route path="/trainer/members/:memberId/workout/edit/:workoutId" element={<MemberWorkoutEdit />} />
+          <Route path="/trainer/members/:memberId/diet" element={<MemberDietList />} />
+          <Route path="/trainer/members/:memberId/diet/:dietId" element={<MemberDietDetail />} />
+          <Route path="/trainer/members/:memberId/membership/register" element={<MembershipRegister />} />
+          <Route path="/trainer/members/:memberId/membership/decrement" element={<MembershipDecrement />} />
+          <Route path="/trainer/membership-alerts" element={<MembershipAlerts />} />
+          <Route path="/trainer/pt-sessions" element={<PTSessionOverview />} />
         </Routes>
       </div>
     </Router>
