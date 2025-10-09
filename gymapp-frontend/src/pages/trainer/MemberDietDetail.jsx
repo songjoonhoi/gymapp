@@ -102,11 +102,16 @@ const MemberDietDetail = () => {
   return (
     <div className="min-h-screen bg-gray-50 pb-20">
       {/* Header */}
-      <div className="bg-white shadow-sm sticky top-0 z-10">
-        <div className="max-w-lg mx-auto px-4 py-4 flex justify-between items-center">
-          <button onClick={() => navigate(`/trainer/members/${memberId}/diet`)} className="text-2xl">←</button>
-        </div>
-      </div>
+      <div className="max-w-lg mx-auto px-4 py-4 flex justify-between items-center">
+            <button onClick={() => navigate(`/trainer/members/${memberId}/diet`)} className="text-2xl">←</button>
+            {/* ✨ 수정 버튼 추가 */}
+            <button
+                onClick={() => navigate(`/trainer/members/${memberId}/diet/edit/${dietId}`)}
+                className="text-primary font-semibold"
+            >
+                수정
+            </button>
+            </div>
 
       {/* Content */}
       <div className="max-w-lg mx-auto">

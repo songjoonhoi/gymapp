@@ -65,15 +65,22 @@ const MemberDietList = () => {
   return (
     <div className="min-h-screen bg-gray-50 pb-24">
       {/* Header */}
-      <div className="bg-white shadow-sm sticky top-0 z-10">
-        <div className="max-w-lg mx-auto px-4 py-4 flex items-center">
-          <button onClick={() => navigate(`/trainer/members/${memberId}`)} className="text-2xl mr-3">←</button>
-          <div>
+      <div className="max-w-lg mx-auto px-4 py-4 flex justify-between items-center">
+        <div className="flex items-center">
+            <button onClick={() => navigate(`/trainer/members/${memberId}`)} className="text-2xl mr-3">←</button>
+            <div>
             <h1 className="text-xl font-bold">{member?.name}님 식단 기록</h1>
             <p className="text-xs text-gray-500">총 {logs.length}회</p>
-          </div>
+            </div>
         </div>
-      </div>
+        {/* ✨ 추가 버튼 */}
+        <button 
+            onClick={() => navigate(`/trainer/members/${memberId}/diet/create`)}
+            className="w-10 h-10 bg-primary text-white rounded-full flex items-center justify-center text-2xl"
+        >
+            +
+        </button>
+        </div>
 
       {/* Content */}
       <div className="max-w-lg mx-auto px-4 py-6">

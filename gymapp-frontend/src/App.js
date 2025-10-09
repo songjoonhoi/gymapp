@@ -37,6 +37,9 @@ import MembershipDecrement from './pages/trainer/MembershipDecrement';
 import MembershipAlerts from './pages/trainer/MembershipAlerts';
 import PTSessionOverview from './pages/trainer/PTSessionOverview';
 import MembershipHistory from './pages/trainer/MembershipHistory';
+import MemberDietCreate from './pages/trainer/MemberDietCreate';
+import MemberDietEdit from './pages/trainer/MemberDietEdit';
+import TrainerStatistics from './pages/trainer/TrainerStatistics';
 
 function App() {
   return (
@@ -77,6 +80,9 @@ function App() {
           <Route path="/trainer/membership-alerts" element={<MembershipAlerts />} />
           <Route path="/trainer/pt-sessions" element={<PTSessionOverview />} />
           <Route path="/trainer/members/:memberId/membership/history" element={<MembershipHistory />} />
+          <Route path="/trainer/members/:memberId/diet/create" element={<MemberDietCreate />} />
+          <Route path="/trainer/members/:memberId/diet/edit/:dietId" element={<MemberDietEdit />} />
+          <Route path="/trainer/statistics" element={<TrainerStatistics />} />
         </Routes>
       </div>
     </Router>
