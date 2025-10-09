@@ -102,16 +102,15 @@ public class MemberController {
         return service.getTraineesWithPermission(trainerId, user);
     }
 
-    // ✅ (새로 추가) CSV 파일로 회원 일괄 등록
-    @PostMapping("/upload-csv")
+    // ✅ Excel 파일로 회원 일괄 등록
+    @PostMapping("/upload-excel")
     @PreAuthorize("hasAnyRole('TRAINER', 'ADMIN')")
-    public void uploadCsv(@RequestParam("file") MultipartFile file,
-                          @AuthenticationPrincipal UserPrincipal user) {
+    public void uploadExcel(@RequestParam("file") MultipartFile file,
+                            @AuthenticationPrincipal UserPrincipal user) {
         try {
-            service.createMembersFromCsv(file, user);
+            service.createMembersFromExcel(file, user);
         } catch (Exception e) {
-            // 예외 처리 (실제 프로덕션에서는 더 정교한 예외 처리가 필요)
-            throw new RuntimeException("CSV 파일 업로드 및 처리 중 오류 발생: " + e.getMessage());
+            throw new RuntimeException("Excel 파일 업로드 및 처리 중 오류 발생: " + e.getMessage());
         }
     }
 

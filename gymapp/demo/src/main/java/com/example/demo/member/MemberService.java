@@ -7,9 +7,8 @@ import com.example.demo.member.dto.MemberCreateRequest;
 import com.example.demo.member.dto.MemberResponse;
 import com.example.demo.member.dto.MemberUpdateRequest;
 import com.example.demo.member.dto.PasswordChangeRequest;
-import com.opencsv.CSVReader;
-import com.opencsv.CSVReaderBuilder;
-import com.opencsv.exceptions.CsvException;
+import org.apache.poi.ss.usermodel.*;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
@@ -22,10 +21,10 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
-import java.io.Reader;
-import java.io.InputStreamReader;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
@@ -192,56 +191,127 @@ public class MemberService {
                 .toList();
     }
 
-    // ✅ (수정) CSV 파일로 회원 일괄 등록
-    public void createMembersFromCsv(MultipartFile file, UserPrincipal user) throws IOException, CsvException {
-        // [수정] CSV 파일을 읽을 때 한글이 깨지지 않도록 'UTF-8' 인코딩을 명시합니다.
-        try (Reader reader = new InputStreamReader(file.getInputStream(), "UTF-8")) {
-            // CSV 파일 파서 생성 (첫 번째 줄은 헤더이므로 건너뜀)
-            CSVReader csvReader = new CSVReaderBuilder(reader)
-                    .withSkipLines(1)
-                    .build();
-
-            List<String[]> rows = csvReader.readAll();
-            List<Member> newMembers = new ArrayList<>();
-            Member trainer = find(user.getId()); // 파일을 업로드한 트레이너
-
-            for (String[] row : rows) {
-                // [수정] row 배열의 길이를 체크하여, 컬럼 수가 부족한 경우(빈 줄 등) 건너뛰도록 함
-                if (row.length < 4) {
-                    continue;
+    // ✅ Excel 파일로 회원 일괄 등록 (속도 개선 버전)
+    public void createMembersFromExcel(MultipartFile file, UserPrincipal user) throws IOException {
+        try (Workbook workbook = new XSSFWorkbook(file.getInputStream())) {
+            Sheet sheet = workbook.getSheetAt(0);
+            
+            Member trainer = find(user.getId());
+            
+            // 1. 엑셀 전체 전화번호 추출
+            Set<String> excelPhones = new HashSet<>();
+            for (int i = 1; i <= sheet.getLastRowNum(); i++) {
+                Row row = sheet.getRow(i);
+                if (row == null) continue;
+                String phone = getCellValue(row.getCell(3));
+                if (phone != null && !phone.trim().isEmpty()) {
+                    excelPhones.add(phone);
                 }
-                
-                // CSV 각 컬럼의 데이터 추출 (순서: 이름, 성별, 연령, 전화번호, 회원권, 가입일, 시작일)
-                String name = row[0];
-                String phone = row[3];
-
-                // 전화번호가 없거나, 이미 DB에 존재하면 건너뜀
-                if (phone == null || phone.trim().isEmpty() || repo.existsByPhone(phone)) {
-                    continue; // 중복 또는 유효하지 않은 데이터는 건너뜀
-                }
-                
-                // 임시 이메일과 비밀번호 생성 (전화번호 기반)
-                String tempEmail = phone + "@gymapp.com";
-                if(repo.existsByEmail(tempEmail)) {
-                    continue; // 임시 이메일도 중복되면 건너뜀
-                }
-
-                Member newMember = Member.builder()
-                        .name(name)
-                        .phone(phone)
-                        .email(tempEmail) // 필수값이므로 전화번호 기반 임시 이메일 부여
-                        .password(passwordEncoder.encode("1234")) // 임시 비밀번호 '1234'
-                        .role(Role.OT) // CSV로 등록된 회원은 기본적으로 '일반 회원(OT)'
-                        .status(UserStatus.ACTIVE)
-                        .trainer(trainer) // 담당 트레이너를 업로더로 자동 지정
-                        .build();
-
-                newMembers.add(newMember);
             }
-
-            // 수집된 신규 회원 목록을 DB에 한 번에 저장
-            repo.saveAll(newMembers);
+            
+            // 2. DB에서 이미 존재하는 전화번호 한 번에 조회
+            Set<String> existingPhones = new HashSet<>(
+                repo.findAll().stream()
+                    .map(Member::getPhone)
+                    .filter(phone -> phone != null && excelPhones.contains(phone))
+                    .toList()
+            );
+            
+            // 3. 새 회원만 필터링
+            List<Member> newMembers = new ArrayList<>();
+            Set<String> processedPhones = new HashSet<>();
+            
+            int successCount = 0;
+            int skipCount = 0;
+            
+            for (int i = 1; i <= sheet.getLastRowNum(); i++) {
+                Row row = sheet.getRow(i);
+                if (row == null) continue;
+                
+                try {
+                    String name = getCellValue(row.getCell(0));
+                    String phone = getCellValue(row.getCell(3));
+                    
+                    if (name == null || name.trim().isEmpty() || 
+                        phone == null || phone.trim().isEmpty()) {
+                        skipCount++;
+                        continue;
+                    }
+                    
+                    // 엑셀 내부 중복 체크
+                    if (processedPhones.contains(phone)) {
+                        skipCount++;
+                        continue;
+                    }
+                    
+                    // DB 중복 체크 (메모리에서)
+                    if (existingPhones.contains(phone)) {
+                        System.out.println("DB 중복으로 건너뜀: " + phone);
+                        skipCount++;
+                        continue;
+                    }
+                    
+                    processedPhones.add(phone);
+                    
+                    String tempEmail = phone + "@gymapp.com";
+                    
+                    Member newMember = Member.builder()
+                            .name(name)
+                            .phone(phone)
+                            .email(tempEmail)
+                            .password(passwordEncoder.encode("1234"))
+                            .role(Role.OT)
+                            .status(UserStatus.ACTIVE)
+                            .trainer(trainer)
+                            .build();
+                    
+                    newMembers.add(newMember);
+                    successCount++;
+                    
+                } catch (Exception e) {
+                    System.err.println("행 " + (i+1) + " 처리 중 오류: " + e.getMessage());
+                    skipCount++;
+                }
+            }
+            
+            // 새 회원 일괄 저장
+            if (!newMembers.isEmpty()) {
+                repo.saveAll(newMembers);
+            }
+            
+            System.out.println("=== Excel 업로드 완료 ===");
+            System.out.println("성공: " + successCount + "명");
+            System.out.println("건너뜀: " + skipCount + "명");
         }
     }
 
+    // ✅ 헬퍼: 셀 값을 String으로 변환
+    private String getCellValue(Cell cell) {
+        if (cell == null) return "";
+        
+        try {
+            switch (cell.getCellType()) {
+                case STRING:
+                    return cell.getStringCellValue().trim();
+                case NUMERIC:
+                    if (DateUtil.isCellDateFormatted(cell)) {
+                        return cell.getDateCellValue().toString();
+                    }
+                    double numericValue = cell.getNumericCellValue();
+                    if (numericValue == (long) numericValue) {
+                        return String.valueOf((long) numericValue);
+                    }
+                    return String.valueOf(numericValue);
+                case BOOLEAN:
+                    return String.valueOf(cell.getBooleanCellValue());
+                case BLANK:
+                    return "";
+                default:
+                    return "";
+            }
+        } catch (Exception e) {
+            System.err.println("셀 값 읽기 오류: " + e.getMessage());
+            return "";
+        }
+    }
 }
