@@ -40,6 +40,7 @@ import MembershipHistory from './pages/trainer/MembershipHistory';
 import MemberDietCreate from './pages/trainer/MemberDietCreate';
 import MemberDietEdit from './pages/trainer/MemberDietEdit';
 import TrainerStatistics from './pages/trainer/TrainerStatistics';
+import TrainerMemberRegister from './pages/trainer/TrainerMemberRegister';
 
 function App() {
   return (
@@ -83,6 +84,7 @@ function App() {
           <Route path="/trainer/members/:memberId/diet/create" element={<MemberDietCreate />} />
           <Route path="/trainer/members/:memberId/diet/edit/:dietId" element={<MemberDietEdit />} />
           <Route path="/trainer/statistics" element={<TrainerStatistics />} />
+          <Route path="/trainer/members/register" element={<TrainerMemberRegister />} />
         </Routes>
       </div>
     </Router>

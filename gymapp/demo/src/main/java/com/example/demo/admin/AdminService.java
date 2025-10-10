@@ -52,14 +52,26 @@ public class AdminService {
 
     // ✅ 모든 회원 조회
     public List<MemberResponse> getAllMembers() {
-        return memberRepo.findAll().stream()
-                .map(m -> new MemberResponse(
-                        m.getId(), m.getName(), m.getEmail(),
-                        m.getPhone(), m.getRole(), m.getStatus(),
-                        m.getCreatedAt(), m.getUpdatedAt(), null
-                ))
-                .toList();
-    }
+    return memberRepo.findAll().stream()
+            .map(m -> new MemberResponse(
+                    m.getId(),
+                    m.getName(),
+                    m.getEmail(),
+                    m.getPhone(),
+                    m.getRole(),
+                    m.getStatus(),
+                    m.getGender(),              // ✨ 추가
+                    m.getAge(),                 // ✨ 추가
+                    m.getAccountStatus(),       // ✨ 추가
+                    m.getMembershipType(),      // ✨ 추가
+                    m.getRegistrationDate(),    // ✨ 추가
+                    m.getStartDate(),           // ✨ 추가
+                    m.getCreatedAt(),
+                    m.getUpdatedAt(),
+                    m.getTrainer() != null ? m.getTrainer().getId() : null
+            ))
+            .toList();
+}
 
     // ✅ 회원 상태 변경 (ACTIVE ↔ INACTIVE)
     public void changeMemberStatus(Long memberId, String status) {
