@@ -10,57 +10,46 @@ const TrainerMembers = () => {
   const [members, setMembers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('ALL');
-  const [searchQuery, setSearchQuery] = useState(''); // 검색어 state 추가
+  const [searchQuery, setSearchQuery] = useState('');
   
-  // 파일 업로드 관련 state
   const [selectedFile, setSelectedFile] = useState(null);
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef(null);
 
   const fetchMembers = async () => {
-  try {
-    setLoading(true);
-    const storedUser = JSON.parse(localStorage.getItem('user'));
-    
-    console.log('===== 회원 목록 조회 시작 =====');
-    console.log('1. storedUser:', storedUser);
-    
-    if (!storedUser || storedUser.role !== 'TRAINER') {
-      alert('잘못된 접근입니다. 다시 로그인해주세요.');
-      navigate('/login');
-      return;
+    try {
+      setLoading(true);
+      const storedUser = JSON.parse(localStorage.getItem('user'));
+      
+      if (!storedUser || storedUser.role !== 'TRAINER') {
+        alert('잘못된 접근입니다. 다시 로그인해주세요.');
+        navigate('/login');
+        return;
+      }
+      
+      const response = await api.get(`/members/${storedUser.memberId}/trainees`);
+      setMembers(response.data);
+    } catch (error) {
+      console.error('❌ 회원 목록 조회 실패:', error);
+      console.error('에러 상세:', error.response?.data);
+    } finally {
+      setLoading(false);
     }
-    
-    console.log('2. API 호출:', `/members/${storedUser.memberId}/trainees`);
-    
-    const response = await api.get(`/members/${storedUser.memberId}/trainees`);
-    
-    console.log('3. API 응답:', response.data);
-    console.log('4. 회원 수:', response.data.length);
-    
-    setMembers(response.data);
-    
-    console.log('5. state 업데이트 완료');
-    console.log('===== 회원 목록 조회 완료 =====');
-  } catch (error) {
-    console.error('❌ 회원 목록 조회 실패:', error);
-    console.error('에러 상세:', error.response?.data);
-  } finally {
-    setLoading(false);
-  }
-};
+  };
 
   useEffect(() => {
     fetchMembers();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // ✨ location.state 변경 감지 (새로 추가)
+  // location.state 변경 감지
   useEffect(() => {
     if (location.state?.refresh) {
       fetchMembers();
       navigate(location.pathname, { replace: true, state: {} });
     }
-  }, [location.state]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.state]); // ✨ 이 부분을 수정하여 오류를 해결했습니다.
 
   const handleFileChange = (event) => {
     setSelectedFile(event.target.files[0]);
@@ -94,75 +83,78 @@ const TrainerMembers = () => {
     }
   };
 
-  // 필터링 + 검색
   const filteredMembers = useMemo(() => {
-  console.log('===== 필터링 시작 =====');
-  console.log('전체 회원:', members.length);
-  console.log('현재 탭:', activeTab);
-  console.log('검색어:', searchQuery);
-  
-  let result = members;
-  
-  // 탭 필터링
-  if (activeTab === 'PT') result = result.filter(m => m.role === 'PT');
-  if (activeTab === 'OT') result = result.filter(m => m.role === 'OT');
-  
-  console.log('탭 필터링 후:', result.length);
-  
-  // 검색 필터링
-  if (searchQuery.trim()) {
-    const query = searchQuery.toLowerCase();
-    result = result.filter(m => 
-      m.name?.toLowerCase().includes(query) || 
-      m.phone?.includes(query)
-    );
-  }
-  
-  console.log('검색 필터링 후:', result.length);
-  console.log('===== 필터링 완료 =====');
-  
-  return result;
-}, [members, activeTab, searchQuery]);
+    let result = members;
+    
+    if (activeTab === 'PT') result = result.filter(m => m.role === 'PT');
+    if (activeTab === 'OT') result = result.filter(m => m.role === 'OT');
+    
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      result = result.filter(m => 
+        m.name?.toLowerCase().includes(query) || 
+        m.phone?.includes(query)
+      );
+    }
+    
+    return result;
+  }, [members, activeTab, searchQuery]);
 
-  const getMembershipStatus = (member) => {
-    if (member.role === 'PT') return 'PT 회원';
-    if (member.role === 'OT') return '일반 회원';
-    return '회원';
+  // 회원권 상태 아이콘을 생성하는 함수
+  const getMemberStatusIndicators = (member) => {
+    const indicators = [];
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    // 1. 만료 여부 확인
+    if (member.membershipEndDate) {
+      const endDate = new Date(member.membershipEndDate);
+      endDate.setHours(0, 0, 0, 0);
+      
+      const timeDiff = endDate.getTime() - today.getTime();
+      const diffDays = Math.ceil(timeDiff / (1000 * 3600 * 24));
+
+      if (diffDays < 0) {
+        indicators.push(<span key="expired" title="회원권 만료">🔴</span>);
+      } else if (diffDays <= 7) {
+        indicators.push(<span key="expiring" title={`만료 ${diffDays}일 전`}>🔶</span>);
+      }
+    }
+
+    // 2. PT 잔여 횟수 확인 (PT 회원만)
+    if (member.role === 'PT' && member.remainPT <= 3) {
+      indicators.push(<span key="low-pt" title={`PT 잔여 ${member.remainPT}회`}>⚠️</span>);
+    }
+
+    return indicators;
   };
- 
+
   return (
     <div className="min-h-screen bg-gray-50 pb-24">
-      {/* Header */}
       <header className="bg-white shadow-sm sticky top-0 z-10">
-  <div className="max-w-lg mx-auto px-4 py-4 flex items-center justify-between">
-    <div className="flex items-center">
-      <button onClick={() => navigate('/home')} className="text-2xl mr-3">←</button>
-      <h1 className="text-2xl font-bold">담당 회원</h1>
-    </div>
-    <div className="flex gap-2">
-      {/* ✨ 새로고침 버튼 추가 */}
-      <button 
-        onClick={() => {
-          console.log('수동 새로고침 시작');
-          fetchMembers();
-        }}
-        className="w-10 h-10 bg-gray-200 text-gray-700 rounded-full flex items-center justify-center text-xl hover:bg-gray-300 transition-colors"
-      >
-        🔄
-      </button>
-      <button 
-        onClick={() => navigate('/trainer/members/register')}
-        className="w-10 h-10 bg-primary text-white rounded-full flex items-center justify-center text-2xl hover:scale-110 transition-transform"
-      >
-        +
-      </button>
-    </div>
-  </div>
-</header>
+        <div className="max-w-lg mx-auto px-4 py-4 flex items-center justify-between">
+          <div className="flex items-center">
+            <button onClick={() => navigate('/home')} className="text-2xl mr-3">←</button>
+            <h1 className="text-2xl font-bold">담당 회원</h1>
+          </div>
+          <div className="flex gap-2">
+            <button 
+              onClick={fetchMembers}
+              className="w-10 h-10 bg-gray-200 text-gray-700 rounded-full flex items-center justify-center text-xl hover:bg-gray-300 transition-colors"
+            >
+              🔄
+            </button>
+            <button 
+              onClick={() => navigate('/trainer/members/register')}
+              className="w-10 h-10 bg-primary text-white rounded-full flex items-center justify-center text-2xl hover:scale-110 transition-transform"
+            >
+              +
+            </button>
+          </div>
+        </div>
+      </header>
  
-      {/* Content */}
       <div className="max-w-lg mx-auto px-4 py-6">
-        {/* Excel 업로드 섹션 */}
         <div className="bg-white p-4 rounded-lg shadow-md mb-6">
           <h3 className="text-lg font-semibold mb-2">Excel로 회원 일괄 등록</h3>
           <div className="flex items-center space-x-2">
@@ -183,7 +175,6 @@ const TrainerMembers = () => {
           </div>
         </div>
 
-        {/* 검색창 추가 */}
         <div className="mb-4">
           <input
             type="text"
@@ -194,7 +185,6 @@ const TrainerMembers = () => {
           />
         </div>
 
-        {/* 탭 UI */}
         <div className="flex border-b border-gray-200 mb-4">
           <button
             onClick={() => setActiveTab('ALL')}
@@ -216,7 +206,6 @@ const TrainerMembers = () => {
           </button>
         </div>
  
-        {/* 회원 리스트 (2열 그리드) */}
         {loading ? (
            <div className="text-center py-10"><p className="text-gray-500">회원 목록을 불러오는 중...</p></div>
         ) : filteredMembers.length === 0 ? (
@@ -235,10 +224,15 @@ const TrainerMembers = () => {
                 className="cursor-pointer"
               >
                 <div className="flex flex-col text-center">
-                  {/* 회원 정보 */}
-                  <h3 className="text-lg font-bold text-gray-800 mb-1 truncate w-full">
-                    {member.name}
-                  </h3>
+                  <div className="flex items-center justify-center gap-2 mb-1">
+                    <h3 className="text-lg font-bold text-gray-800 truncate">
+                      {member.name}
+                    </h3>
+                    <div className="flex items-center gap-1">
+                      {getMemberStatusIndicators(member)}
+                    </div>
+                  </div>
+
                   <p className="text-xs text-gray-500 mb-3 truncate w-full">
                     {member.phone || '-'}
                   </p>
@@ -247,7 +241,7 @@ const TrainerMembers = () => {
                     <span className={`inline-block px-2 py-1 rounded text-xs font-semibold ${
                       member.role === 'PT' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-700'
                     }`}>
-                      {getMembershipStatus(member)}
+                      {member.role === 'PT' ? 'PT 회원' : '일반 회원'}
                     </span>
                     {member.status === 'ACTIVE' ? (
                       <span className="inline-block w-2 h-2 bg-green-500 rounded-full" title="활성"></span>
