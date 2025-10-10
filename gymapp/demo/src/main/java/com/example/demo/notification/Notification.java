@@ -21,15 +21,15 @@ public class Notification {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "member_id", nullable = false)
-    private Member member;  // 알림 대상 회원
+    private Member member;
 
-    @Enumerated(EnumType.STRING)
-    private NotificationType type; // SUCCESS, WARNING, INFO, ADMIN_NOTICE
+    @Enumerated(EnumType.STRING)  // ✅ STRING 타입 사용
+    private NotificationType type;
 
-    private String message; // 알림 내용
+    private String message;
 
     @Column(name = "is_read", nullable = false)
-    private boolean isRead; // 읽음 여부
+    private boolean isRead;
 
     private LocalDateTime createdAt;
 

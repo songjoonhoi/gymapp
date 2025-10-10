@@ -133,11 +133,23 @@ const MemberDashboard = () => {
           </div>
         )}
 
-        {/* 3. 멤버십 관리 버튼 (2칸 그리드) */}
+        {/* 3. 멤버십 관리 버튼 (2x2 그리드) */}
         <div className="space-y-3">
           <h2 className="text-lg font-bold text-gray-800 px-1">멤버십 관리</h2>
           
           <div className="grid grid-cols-2 gap-3">
+            {/* ✨ PT 이력 (새로 추가!) */}
+            <Card onClick={() => navigate(`/trainer/members/${memberId}/pt`)}>
+              <div className="text-center py-2">
+                <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center text-2xl mx-auto mb-2">
+                  💪
+                </div>
+                <h3 className="font-bold text-gray-800 text-sm">PT 이력</h3>
+                <p className="text-xs text-gray-500 mt-1">세션 기록</p>
+              </div>
+            </Card>
+
+            {/* PT 세션 등록 */}
             <Card onClick={() => navigate(`/trainer/members/${memberId}/membership/register`)}>
               <div className="text-center py-2">
                 <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center text-2xl mx-auto mb-2">
@@ -148,6 +160,7 @@ const MemberDashboard = () => {
               </div>
             </Card>
 
+            {/* PT 세션 차감 */}
             <Card onClick={() => navigate(`/trainer/members/${memberId}/membership/decrement`)}>
               <div className="text-center py-2">
                 <div className="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center text-2xl mx-auto mb-2">
@@ -155,6 +168,17 @@ const MemberDashboard = () => {
                 </div>
                 <h3 className="font-bold text-gray-800 text-sm">PT 세션 차감</h3>
                 <p className="text-xs text-gray-500 mt-1">세션 사용</p>
+              </div>
+            </Card>
+
+            {/* 등록 이력 */}
+            <Card onClick={() => navigate(`/trainer/members/${memberId}/membership/history`)}>
+              <div className="text-center py-2">
+                <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center text-2xl mx-auto mb-2">
+                  📋
+                </div>
+                <h3 className="font-bold text-gray-800 text-sm">등록 이력</h3>
+                <p className="text-xs text-gray-500 mt-1">회원권 내역</p>
               </div>
             </Card>
           </div>

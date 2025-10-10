@@ -20,6 +20,7 @@ import PasswordChange from './pages/member/PasswordChange';
 import Statistics from './pages/member/Statistics';
 import Notifications from './pages/member/Notifications';
 import Membership from './pages/member/Membership';
+import MyPtSessions from './pages/member/MyPtSessions';
 
 
 
@@ -41,6 +42,10 @@ import MemberDietCreate from './pages/trainer/MemberDietCreate';
 import MemberDietEdit from './pages/trainer/MemberDietEdit';
 import TrainerStatistics from './pages/trainer/TrainerStatistics';
 import TrainerMemberRegister from './pages/trainer/TrainerMemberRegister';
+import PtSessionCreate from './pages/trainer/PtSessionCreate';
+import MemberPtSessions from './pages/trainer/MemberPtSessions';
+import PtSessionDetail from './pages/trainer/PtSessionDetail';
+import PtSessionEdit from './pages/trainer/PtSessionEdit';
 
 function App() {
   return (
@@ -66,6 +71,8 @@ function App() {
           <Route path="/statistics" element={<Statistics />} />
           <Route path="/notifications" element={<Notifications />} />
           <Route path="/membership" element={<Membership />} />
+          <Route path="/my-pt-sessions" element={<MyPtSessions />} />
+          
           
           {/* Trainer Routes */}
           <Route path="/trainer/members" element={<TrainerMembers />} />
@@ -85,6 +92,10 @@ function App() {
           <Route path="/trainer/members/:memberId/diet/edit/:dietId" element={<MemberDietEdit />} />
           <Route path="/trainer/statistics" element={<TrainerStatistics />} />
           <Route path="/trainer/members/register" element={<TrainerMemberRegister />} />
+          <Route path="/trainer/members/:memberId/pt/create" element={<PtSessionCreate />} />
+          <Route path="/trainer/members/:memberId/pt/:sessionId/edit" element={<PtSessionEdit />} />
+          <Route path="/trainer/members/:memberId/pt/:sessionId" element={<PtSessionDetail />} />
+          <Route path="/trainer/members/:memberId/pt" element={<MemberPtSessions />} />
         </Routes>
       </div>
     </Router>

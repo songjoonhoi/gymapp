@@ -166,26 +166,37 @@ public class PtSessionService {
      * - 삭제 시 PT 횟수 복구
      */
     public void delete(Long sessionId) {
-        PtSession session = sessionRepo.findById(sessionId)
-                .orElseThrow(() -> new EntityNotFoundException("PT 세션을 찾을 수 없습니다: " + sessionId));
+    PtSession session = sessionRepo.findById(sessionId)
+            .orElseThrow(() -> new EntityNotFoundException("PT 세션을 찾을 수 없습니다: " + sessionId));
 
-        checkWritePermission(session.getTrainer().getId());
+    checkWritePermission(session.getTrainer().getId());
 
-        // PT 횟수 복구
+    // PT 횟수 복구
+    try {
         Membership membership = membershipRepo.findByMemberId(session.getMember().getId())
                 .orElseThrow(() -> new EntityNotFoundException("회원권 정보가 없습니다."));
 
-        membership.setPtUsed(membership.getPtUsed() - 1);
-
-        sessionRepo.delete(session);
-
-        notiService.create(
-                session.getMember().getId(),
-                NotificationType.INFO,
-                "PT 세션 기록이 삭제되었습니다. PT 횟수가 복구되었습니다."
-        );
+        if (membership.getPtUsed() > 0) {
+            membership.setPtUsed(membership.getPtUsed() - 1);
+            System.out.println("PT 횟수 복구: " + membership.getPtUsed() + " → " + (membership.getPtUsed() + 1));
+        }
+    } catch (Exception e) {
+        System.err.println("PT 횟수 복구 중 오류: " + e.getMessage());
     }
 
+    sessionRepo.delete(session);
+
+    // ✅ 알림 생성 (SUCCESS 사용)
+    try {
+        notiService.create(
+                session.getMember().getId(),
+                NotificationType.SUCCESS,
+                "PT 세션 기록이 삭제되었습니다. PT 횟수가 복구되었습니다."
+        );
+    } catch (Exception e) {
+        System.err.println("알림 생성 중 오류: " + e.getMessage());
+    }
+}
     // ========================
     // 🔒 권한 체크 헬퍼
     // ========================
