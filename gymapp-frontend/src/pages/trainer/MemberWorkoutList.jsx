@@ -23,7 +23,7 @@ const MemberWorkoutList = () => {
       setMember(memberResponse.data);
 
       // 운동 기록
-      const logsResponse = await api.get(`/workout-logs/${memberId}`);
+      const logsResponse = await api.get(`/workout-logs/member/${memberId}`);
       setLogs(logsResponse.data);
     } catch (error) {
       console.error('데이터 조회 실패:', error);

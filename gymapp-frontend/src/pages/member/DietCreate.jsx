@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import Button from '../../components/Button';
 import Input from '../../components/Input';
 import api from '../../services/api';
+import BottomNav from '../../components/BottomNav';
 
 const DietCreate = () => {
   const navigate = useNavigate();
@@ -82,7 +83,7 @@ const DietCreate = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 pb-24">
       {/* Header */}
       <div className="bg-white shadow-sm sticky top-0 z-10">
         <div className="max-w-lg mx-auto px-4 py-4 flex items-center">
@@ -168,6 +169,7 @@ const DietCreate = () => {
           </Button>
         </form>
       </div>
+      <BottomNav />
     </div>
   );
 };

@@ -22,32 +22,29 @@ const MemberDietEdit = () => {
   }, [dietId]);
 
   const fetchData = async () => {
-    try {
-      // 회원 정보
-      const memberResponse = await api.get(`/members/${memberId}`);
-      setMember(memberResponse.data);
+  try {
+    // 회원 정보
+    const memberResponse = await api.get(`/members/${memberId}`);
+    setMember(memberResponse.data);
 
-      // 식단 기록
-      const logsResponse = await api.get(`/diet-logs/${memberId}`);
-      const log = logsResponse.data.find(l => l.id === parseInt(dietId));
-      
-      if (log) {
-        setFormData({
-          title: log.title,
-          content: log.content,
-        });
-        if (log.mediaUrl) {
-          setPreview(`http://localhost:7777${log.mediaUrl}`);
-        }
-      }
-    } catch (error) {
-      console.error('식단 기록 조회 실패:', error);
-      alert('기록을 불러올 수 없습니다.');
-      navigate(`/trainer/members/${memberId}/diet`);
-    } finally {
-      setLoading(false);
+    // ✨ 식단 기록 (변경!)
+    const response = await api.get(`/diet-logs/detail/${dietId}`);
+    
+    setFormData({
+      title: response.data.title,
+      content: response.data.content,
+    });
+    if (response.data.mediaUrl) {
+      setPreview(`http://localhost:7777${response.data.mediaUrl}`);
     }
-  };
+  } catch (error) {
+    console.error('식단 기록 조회 실패:', error);
+    alert('기록을 불러올 수 없습니다.');
+    navigate(`/trainer/members/${memberId}/diet`);
+  } finally {
+    setLoading(false);
+  }
+};
 
   const handleChange = (e) => {
     setFormData({

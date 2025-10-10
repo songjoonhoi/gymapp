@@ -16,23 +16,22 @@ const MemberWorkoutDetail = () => {
   }, [workoutId]);
 
   const fetchData = async () => {
-    try {
-      // 회원 정보
-      const memberResponse = await api.get(`/members/${memberId}`);
-      setMember(memberResponse.data);
+  try {
+    // 회원 정보
+    const memberResponse = await api.get(`/members/${memberId}`);
+    setMember(memberResponse.data);
 
-      // 운동 기록
-      const logsResponse = await api.get(`/workout-logs/${memberId}`);
-      const foundLog = logsResponse.data.find(l => l.id === parseInt(workoutId));
-      setLog(foundLog);
-    } catch (error) {
-      console.error('운동 기록 조회 실패:', error);
-      alert('기록을 불러올 수 없습니다.');
-      navigate(`/trainer/members/${memberId}/workout`);
-    } finally {
-      setLoading(false);
-    }
-  };
+    // ✨ 운동 기록 (수정!)
+    const response = await api.get(`/workout-logs/detail/${workoutId}`);
+    setLog(response.data);
+  } catch (error) {
+    console.error('운동 기록 조회 실패:', error);
+    alert('기록을 불러올 수 없습니다.');
+    navigate(`/trainer/members/${memberId}/workout`);
+  } finally {
+    setLoading(false);
+  }
+};
 
   const handleDelete = async () => {
     if (!window.confirm('정말 삭제하시겠습니까?')) return;

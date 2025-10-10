@@ -24,7 +24,7 @@ const MemberDietList = () => {
       setMember(memberResponse.data);
 
       // 식단 기록 조회
-      const logsResponse = await api.get(`/diet-logs/${memberId}`);
+      const logsResponse = await api.get(`/diet-logs/member/${memberId}`);
       setLogs(logsResponse.data);
 
       // 오늘 총 칼로리 계산

@@ -177,7 +177,7 @@ public class WorkoutLogService {
 /**
  * 조회 권한 체크: 본인 + 담당 트레이너 + 관리자
  */
-private void checkReadPermission(Long memberId) {
+public void checkReadPermission(Long memberId) {
     UserPrincipal user = getCurrentUser();
     
     // 관리자는 모든 회원의 로그 조회 가능

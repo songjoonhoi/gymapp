@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import Button from '../../components/Button';
 import api from '../../services/api';
+import BottomNav from '../../components/BottomNav';
 
 // ✨ 현재 로그인한 사용자 정보를 가져오는 헬퍼 함수
 const getCurrentUser = () => {
@@ -36,7 +37,7 @@ const DietDetail = () => {
     // ✨ [수정] 식단일지 상세 정보를 올바른 API로 조회
     const fetchLogDetail = async () => {
         try {
-            const response = await api.get(`/diet-logs/${id}`);
+            const response = await api.get(`/diet-logs/detail/${id}`);
             setLog(response.data);
         } catch (error) {
             console.error('식단 기록 조회 실패:', error);
@@ -116,11 +117,11 @@ const DietDetail = () => {
     const canModifyLog = currentUser && (currentUser.memberId === log.memberId || currentUser.isAdmin);
 
     return (
-        <div className="min-h-screen bg-gray-50 pb-20">
+        <div className="min-h-screen bg-gray-50 pb-24">
             {/* Header */}
             <div className="bg-white shadow-sm sticky top-0 z-10">
                 <div className="max-w-lg mx-auto px-4 py-4 flex justify-between items-center">
-                    <button onClick={() => navigate(-1)} className="text-2xl">←</button>
+                    <button onClick={() => navigate('/diet')} className="text-2xl">←</button>
                     {canModifyLog && (
                          <button
                             onClick={() => navigate(`/diet/edit/${id}`)}
@@ -217,6 +218,7 @@ const DietDetail = () => {
                 </div>
 
             </div>
+            <BottomNav />
         </div>
     );
 };

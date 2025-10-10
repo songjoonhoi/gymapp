@@ -22,32 +22,29 @@ const MemberWorkoutEdit = () => {
   }, [workoutId]);
 
   const fetchData = async () => {
-    try {
-      // 회원 정보
-      const memberResponse = await api.get(`/members/${memberId}`);
-      setMember(memberResponse.data);
+  try {
+    // 회원 정보
+    const memberResponse = await api.get(`/members/${memberId}`);
+    setMember(memberResponse.data);
 
-      // 운동 기록
-      const logsResponse = await api.get(`/workout-logs/${memberId}`);
-      const log = logsResponse.data.find(l => l.id === parseInt(workoutId));
-      
-      if (log) {
-        setFormData({
-          title: log.title,
-          content: log.content,
-        });
-        if (log.mediaPreviewUrl) {
-          setPreview(`http://localhost:7777${log.mediaPreviewUrl}`);
-        }
-      }
-    } catch (error) {
-      console.error('운동 기록 조회 실패:', error);
-      alert('기록을 불러올 수 없습니다.');
-      navigate(`/trainer/members/${memberId}/workout`);
-    } finally {
-      setLoading(false);
+    // ✨ 운동 기록 (변경!)
+    const response = await api.get(`/workout-logs/detail/${workoutId}`);
+    
+    setFormData({
+      title: response.data.title,
+      content: response.data.content,
+    });
+    if (response.data.mediaPreviewUrl) {
+      setPreview(`http://localhost:7777${response.data.mediaPreviewUrl}`);
     }
-  };
+  } catch (error) {
+    console.error('운동 기록 조회 실패:', error);
+    alert('기록을 불러올 수 없습니다.');
+    navigate(`/trainer/members/${memberId}/workout`);
+  } finally {
+    setLoading(false);
+  }
+};
 
   const handleChange = (e) => {
     setFormData({

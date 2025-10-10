@@ -16,7 +16,7 @@ const WorkoutList = () => {
   const fetchLogs = async () => {
     try {
       const user = JSON.parse(localStorage.getItem('user'));
-      const response = await api.get(`/workout-logs/${user.memberId}`);
+      const response = await api.get(`/workout-logs/member/${user.memberId}`);
       setLogs(response.data);
     } catch (error) {
       console.error('운동 기록 조회 실패:', error);

@@ -19,10 +19,10 @@ const Statistics = () => {
     try {
       const user = JSON.parse(localStorage.getItem('user'));
       
-      const workoutResponse = await api.get(`/workout-logs/${user.memberId}`);
+      const workoutResponse = await api.get(`/workout-logs/member/${user.memberId}`);
       const workouts = workoutResponse.data;
       
-      const dietResponse = await api.get(`/diet-logs/${user.memberId}`);
+      const dietResponse = await api.get(`/diet-logs/member/${user.memberId}`);
       const diets = dietResponse.data;
 
       const thisWeek = getThisWeekData(workouts, diets);

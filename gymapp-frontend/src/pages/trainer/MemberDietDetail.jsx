@@ -19,26 +19,25 @@ const MemberDietDetail = () => {
   }, [dietId]);
 
   const fetchData = async () => {
-    try {
-      // 회원 정보
-      const memberResponse = await api.get(`/members/${memberId}`);
-      setMember(memberResponse.data);
+  try {
+    // 회원 정보
+    const memberResponse = await api.get(`/members/${memberId}`);
+    setMember(memberResponse.data);
 
-      // 식단 기록
-      const logsResponse = await api.get(`/diet-logs/${memberId}`);
-      const foundLog = logsResponse.data.find(l => l.id === parseInt(dietId));
-      setLog(foundLog);
+    // ✨ 식단 기록 (수정!)
+    const response = await api.get(`/diet-logs/detail/${dietId}`);
+    setLog(response.data);
 
-      // 댓글 목록
-      await fetchComments();
-    } catch (error) {
-      console.error('식단 기록 조회 실패:', error);
-      alert('기록을 불러올 수 없습니다.');
-      navigate(`/trainer/members/${memberId}/diet`);
-    } finally {
-      setLoading(false);
-    }
-  };
+    // 댓글 목록
+    await fetchComments();
+  } catch (error) {
+    console.error('식단 기록 조회 실패:', error);
+    alert('기록을 불러올 수 없습니다.');
+    navigate(`/trainer/members/${memberId}/diet`);
+  } finally {
+    setLoading(false);
+  }
+};
 
   const fetchComments = async () => {
     try {

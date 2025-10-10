@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import com.example.demo.auth.UserPrincipal;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import jakarta.persistence.EntityNotFoundException;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -25,29 +26,54 @@ import java.util.List;
 public class WorkoutLogController {
 
     private final WorkoutLogService service;
+    private final WorkoutLogRepository repo;  // ✨ 추가
 
     // ✅ 생성
-    @PostMapping // URL에서 "/{memberId}" 제거
+    @PostMapping
     @PreAuthorize("hasAnyRole('OT','PT','TRAINER','ADMIN')")
     public ResponseEntity<WorkoutLogResponse> create(
             @AuthenticationPrincipal UserPrincipal user,
             @ModelAttribute WorkoutLogRequest req
     ) {
-       // ✨ [핵심 수정] 트레이너가 보낸 memberId가 있으면 그것을 사용하고,
-        // 없으면(회원 본인이 작성) 로그인한 사용자 ID를 사용합니다.
         Long targetMemberId = (req.memberId() != null) ? req.memberId() : user.getId();
-
         WorkoutLogResponse res = service.create(targetMemberId, req);
         return ResponseEntity.status(HttpStatus.CREATED).body(res);
     }
 
+    // ✨ 단일 운동 조회 (새로 추가!)
+    @GetMapping("/detail/{id}")
+    public ResponseEntity<WorkoutLogResponse> getById(@PathVariable Long id) {
+        WorkoutLog log = repo.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("운동 기록을 찾을 수 없습니다: " + id));
+        
+        // 권한 체크
+        service.checkReadPermission(log.getMember().getId());
+        
+        // 응답 생성
+        String previewUrl = (log.getMediaUrl() != null)
+                ? "/api/workout-logs/" + log.getId() + "/media"
+                : null;
+        
+        WorkoutLogResponse response = new WorkoutLogResponse(
+                log.getId(),
+                log.getMember().getId(),
+                log.getTitle(),
+                log.getContent(),
+                previewUrl,
+                log.getMediaType(),
+                log.getCreatedAt()
+        );
+        
+        return ResponseEntity.ok(response);
+    }
+
     // ✅ 회원별 조회
-    @GetMapping("/{memberId}")
+    @GetMapping("/member/{memberId}")  // ✨ URL 변경!
     public List<WorkoutLogResponse> listByMember(@PathVariable Long memberId) {
         return service.listByMember(memberId);
     }
 
-    // ✅ 전체 조회 (페이지네이션)
+    // ✅ 전체 조회
     @GetMapping
     public Page<WorkoutLogResponse> list(@RequestParam(defaultValue = "0") int page,
                                          @RequestParam(defaultValue = "20") int size) {
@@ -77,7 +103,7 @@ public class WorkoutLogController {
                                      @RequestParam String title,
                                      @RequestParam String content,
                                      @RequestParam(required = false) MultipartFile media) {
-        return service.update(logId, new WorkoutLogRequest(title, content, media,null));
+        return service.update(logId, new WorkoutLogRequest(title, content, media, null));
     }
 
     // ✅ 삭제

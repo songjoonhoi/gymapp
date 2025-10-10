@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import Button from '../../components/Button';
 import Input from '../../components/Input';
 import api from '../../services/api';
+import BottomNav from '../../components/BottomNav';
 
 const WorkoutEdit = () => {
   const navigate = useNavigate();
@@ -20,28 +21,25 @@ const WorkoutEdit = () => {
   }, [id]);
 
   const fetchLog = async () => {
-    try {
-      const user = JSON.parse(localStorage.getItem('user'));
-      const response = await api.get(`/workout-logs/${user.memberId}`);
-      const log = response.data.find(l => l.id === parseInt(id));
-      
-      if (log) {
-        setFormData({
-          title: log.title,
-          content: log.content,
-        });
-        if (log.mediaUrl) {
-          setPreview(`http://localhost:7777${log.mediaUrl}`);
-        }
-      }
-    } catch (error) {
-      console.error('운동 기록 조회 실패:', error);
-      alert('기록을 불러올 수 없습니다.');
-      navigate('/workout');
-    } finally {
-      setLoading(false);
+  try {
+    // ✨ 변경
+    const response = await api.get(`/workout-logs/detail/${id}`);
+    
+    setFormData({
+      title: response.data.title,
+      content: response.data.content,
+    });
+    if (response.data.mediaPreviewUrl) {
+      setPreview(`http://localhost:7777${response.data.mediaPreviewUrl}`);
     }
-  };
+  } catch (error) {
+    console.error('운동 기록 조회 실패:', error);
+    alert('기록을 불러올 수 없습니다.');
+    navigate('/workout');
+  } finally {
+    setLoading(false);
+  }
+};
 
   const handleChange = (e) => {
     setFormData({
@@ -99,7 +97,7 @@ const WorkoutEdit = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 pb-24">
       {/* Header */}
       <div className="bg-white shadow-sm sticky top-0 z-10">
         <div className="max-w-lg mx-auto px-4 py-4 flex items-center">
@@ -161,6 +159,7 @@ const WorkoutEdit = () => {
           </Button>
         </form>
       </div>
+      <BottomNav />
     </div>
   );
 };

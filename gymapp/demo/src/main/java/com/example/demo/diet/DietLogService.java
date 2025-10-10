@@ -36,6 +36,7 @@ public class DietLogService {
     private final FileStorage fileStorage;
     private final NotificationService notiService;
     private final AiNutritionService aiService;
+    private final DietCommentRepository commentRepo;
 
     // ✅ 생성
     public DietLogResponse create(Long memberId, DietLogRequest req) {
@@ -107,16 +108,30 @@ public class DietLogService {
 
     // ✅ 삭제
     public void delete(Long logId) {
-        DietLog log = logRepo.findById(logId)
-                .orElseThrow(() -> new EntityNotFoundException("식단일지 없음: " + logId));
-        checkWritePermission(log.getMember().getId()); // 🔒 삭제 권한 확인
+    DietLog log = logRepo.findById(logId)
+            .orElseThrow(() -> new EntityNotFoundException("식단일지 없음: " + logId));
+    
+    checkWritePermission(log.getMember().getId());
 
-        if (log.getMediaUrl() != null) {
-            fileStorage.delete(log.getMediaUrl());
+    // ✨ 댓글 먼저 삭제
+    try {
+        List<DietComment> comments = commentRepo.findByDietLogId(logId);
+        if (!comments.isEmpty()) {
+            System.out.println("식단 기록 삭제 전 댓글 " + comments.size() + "개 삭제");
+            commentRepo.deleteAll(comments);
         }
-        logRepo.delete(log);
-        notiService.create(log.getMember().getId(), NotificationType.WARNING, "식단 기록이 삭제되었습니다.");
+    } catch (Exception e) {
+        System.err.println("댓글 삭제 중 오류: " + e.getMessage());
     }
+
+    // 미디어 파일 삭제
+    if (log.getMediaUrl() != null) {
+        fileStorage.delete(log.getMediaUrl());
+    }
+    
+    logRepo.delete(log);
+    notiService.create(log.getMember().getId(), NotificationType.WARNING, "식단 기록이 삭제되었습니다.");
+}
 
     // ✅ 회원별 조회
     @Transactional(readOnly = true)

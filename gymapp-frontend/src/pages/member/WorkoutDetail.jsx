@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import Button from '../../components/Button';
 import api from '../../services/api';
+import BottomNav from '../../components/BottomNav';
 
 const WorkoutDetail = () => {
   const navigate = useNavigate();
@@ -15,10 +16,9 @@ const WorkoutDetail = () => {
 
   const fetchLog = async () => {
     try {
-      const user = JSON.parse(localStorage.getItem('user'));
-      const response = await api.get(`/workout-logs/${user.memberId}`);
-      const foundLog = response.data.find(l => l.id === parseInt(id));
-      setLog(foundLog);
+      // ✨ 변경: 직접 ID로 조회
+      const response = await api.get(`/workout-logs/detail/${id}`);
+      setLog(response.data);
     } catch (error) {
       console.error('운동 기록 조회 실패:', error);
       alert('기록을 불러올 수 없습니다.');
@@ -69,7 +69,7 @@ const WorkoutDetail = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 pb-24">
       {/* Header */}
       <div className="bg-white shadow-sm sticky top-0 z-10">
         <div className="max-w-lg mx-auto px-4 py-4 flex justify-between items-center">
@@ -87,12 +87,12 @@ const WorkoutDetail = () => {
       <div className="max-w-lg mx-auto">
         {/* 이미지 */}
         {log.mediaPreviewUrl && (
-            <img
-                src={`http://localhost:7777${log.mediaPreviewUrl}`}
-                alt={log.title}
-                className="w-full h-80 object-contain bg-gray-100"
-            />
-            )}
+          <img
+            src={`http://localhost:7777${log.mediaPreviewUrl}`}
+            alt={log.title}
+            className="w-full h-80 object-contain bg-gray-100"
+          />
+        )}
 
         {/* 내용 */}
         <div className="p-6 space-y-6">
@@ -112,6 +112,7 @@ const WorkoutDetail = () => {
           </Button>
         </div>
       </div>
+      <BottomNav />
     </div>
   );
 };

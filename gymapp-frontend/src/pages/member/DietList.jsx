@@ -17,7 +17,7 @@ const DietList = () => {
   const fetchLogs = async () => {
     try {
       const user = JSON.parse(localStorage.getItem('user'));
-      const response = await api.get(`/diet-logs/${user.memberId}`);
+      const response = await api.get(`/diet-logs/member/${user.memberId}`);
       setLogs(response.data);
       
       // 오늘 총 칼로리 계산
