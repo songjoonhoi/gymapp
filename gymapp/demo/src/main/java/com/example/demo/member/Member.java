@@ -3,10 +3,14 @@ package com.example.demo.member;
 import com.example.demo.common.BaseEntity;
 import com.example.demo.common.enums.Role;
 import com.example.demo.common.enums.UserStatus;
+import com.example.demo.common.enums.Gender;           // ✨ 추가
+import com.example.demo.common.enums.AccountStatus;    // ✨ 추가
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.SQLDelete;
 import org.hibernate.annotations.Where;
+
+import java.time.LocalDate;  // ✨ 추가
 
 @Getter 
 @Setter
@@ -15,7 +19,10 @@ import org.hibernate.annotations.Where;
 @Builder
 @Entity 
 @Table(name = "members",
-       indexes = { @Index(name="idx_member_email", columnList = "email", unique = true) })
+       indexes = { 
+           @Index(name="idx_member_email", columnList = "email", unique = true),
+           @Index(name="idx_member_phone", columnList = "phone")  // ✨ 전화번호 인덱스 추가
+       })
 @SQLDelete(sql = "UPDATE members SET deleted_at = CURRENT_TIMESTAMP WHERE id = ?")
 @Where(clause = "deleted_at IS NULL")
 public class Member extends BaseEntity {
@@ -27,20 +34,38 @@ public class Member extends BaseEntity {
     private String email;
 
     @Column(nullable = false)
-    private String password; // BCrypt로 해시 저장
+    private String password;
 
     @Column(length = 20)
     private String phone;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
-    private Role role; // OT/PT/TRAINER/ADMIN
+    private Role role;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
-    private UserStatus status; // ACTIVE/INACTIVE
+    private UserStatus status;
 
-    // ✅ 담당 트레이너
+    // ✨ 새로 추가되는 필드들
+    @Enumerated(EnumType.STRING)
+    @Column(length = 10)
+    private Gender gender;
+
+    private Integer age;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    @Builder.Default
+    private AccountStatus accountStatus = AccountStatus.ACTIVE;
+
+    @Column(length = 100)
+    private String membershipType;  // 회원권 (예: "3개월권", "1년권")
+
+    private LocalDate registrationDate;  // 가입일
+
+    private LocalDate startDate;  // 시작일
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "trainer_id")
     private Member trainer;
