@@ -3,6 +3,7 @@ package com.example.demo.member;
 import com.example.demo.common.BaseEntity;
 import com.example.demo.common.enums.Role;
 import com.example.demo.common.enums.UserStatus;
+import com.example.demo.membership.Membership;
 import com.example.demo.common.enums.Gender;           // ✨ 추가
 import com.example.demo.common.enums.AccountStatus;    // ✨ 추가
 import jakarta.persistence.*;
@@ -69,4 +70,8 @@ public class Member extends BaseEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "trainer_id")
     private Member trainer;
+
+    // ✅ 회원권과의 1:1 관계 (양방향)
+    @OneToOne(mappedBy = "member", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
+    private Membership membership;
 }

@@ -22,6 +22,13 @@ const Profile = () => {
   const fetchUserInfo = async () => {
     try {
       const storedUser = JSON.parse(localStorage.getItem('user'));
+
+      // 사용자 정보가 없으면 로그인 페이지로 보내고 함수를 즉시 종료합니다.
+      if (!storedUser) {
+        navigate('/login');
+        return;
+      }
+
       const response = await api.get(`/members/${storedUser.memberId}`);
       setUser(response.data);
       setFormData({

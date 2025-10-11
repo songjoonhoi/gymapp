@@ -17,7 +17,8 @@ const MembershipAlerts = () => {
 
   const fetchAlerts = async () => {
     try {
-      const response = await api.get(`/memberships/alerts?threshold=${threshold}`);
+      // ✨ 수정된 부분
+      const response = await api.get(`/memberships/trainer/alerts?threshold=${threshold}`);
       setAlerts(response.data);
     } catch (error) {
       console.error('알림 조회 실패:', error);

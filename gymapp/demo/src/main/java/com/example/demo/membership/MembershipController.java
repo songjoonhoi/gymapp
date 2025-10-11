@@ -32,6 +32,15 @@ public class MembershipController {
         return ResponseEntity.ok(response);
     }
 
+    // ✅ 잔여 적은 회원 알림 (트레이너/관리자만)
+    @GetMapping("/trainer/alerts") // ✨ 수정된 부분
+    @PreAuthorize("hasAnyRole('TRAINER','ADMIN')")
+    public List<LowRemainItem> alerts(@RequestParam(defaultValue = "4") int threshold,
+                                      @AuthenticationPrincipal UserPrincipal user) {
+        System.out.println("✅ /api/memberships/trainer/alerts 요청 도착!");                                
+        return service.lowRemainListWithPermission(threshold, user);
+    }
+
     // ✅ 멤버십 조회 (본인/트레이너/관리자)
     @GetMapping("/{memberId}")
     @PreAuthorize("hasAnyRole('OT','PT','TRAINER','ADMIN')")
@@ -49,13 +58,7 @@ public class MembershipController {
         return service.decrementWithPermission(memberId, req, user);
     }
 
-    // ✅ 잔여 적은 회원 알림 (트레이너/관리자만)
-    @GetMapping("/alerts")
-    @PreAuthorize("hasAnyRole('TRAINER','ADMIN')")
-    public List<LowRemainItem> alerts(@RequestParam(defaultValue = "4") int threshold,
-                                      @AuthenticationPrincipal UserPrincipal user) {
-        return service.lowRemainListWithPermission(threshold, user);
-    }
+    
 
     // ✅ 특정 회원의 가장 최근 멤버십 요약 정보 조회 API
     @GetMapping("/member/{memberId}/latest-summary")

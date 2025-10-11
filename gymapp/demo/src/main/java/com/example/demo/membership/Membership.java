@@ -7,6 +7,8 @@ import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.SQLDelete;
 import org.hibernate.annotations.Where;
+import org.hibernate.annotations.OnDelete;
+import org.hibernate.annotations.OnDeleteAction;
 
 import java.time.LocalDate;
 
@@ -20,9 +22,9 @@ import java.time.LocalDate;
 public class Membership extends BaseEntity {
 
     @OneToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name="member_id", nullable = false)
+    @JoinColumn(name = "member_id", nullable = false)
+    @OnDelete(action = OnDeleteAction.CASCADE) // 🔥 DB와 동일하게 회원 삭제 시 자동 삭제
     private Member member;
-
     // 정규 PT
     @Column(nullable = false) private int ptTotal;
     @Column(nullable = false) private int ptUsed;

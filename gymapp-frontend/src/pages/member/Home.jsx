@@ -28,6 +28,13 @@ const Home = () => {
   const fetchUnreadCount = async () => {
     try {
       const userData = JSON.parse(localStorage.getItem('user'));
+
+      // 사용자 정보가 없으면 API를 호출하지 않고 함수를 종료합니다.
+      if (!userData || !userData.memberId) {
+        navigate('/login');
+        return;
+      }
+      
       const response = await api.get(`/notifications/${userData.memberId}/unread-count`);
       setUnreadCount(response.data);
     } catch (error) {
@@ -36,13 +43,15 @@ const Home = () => {
   };
 
   const fetchAlertCount = async () => {
-    try {
-      const response = await api.get('/memberships/alerts?threshold=4');
-      setAlertCount(response.data.length);
-    } catch (error) {
-      console.error('알림 개수 조회 실패:', error);
-    }
-  };
+  try {
+    // ✨ 수정할 부분: URL을 '/memberships/trainer/alerts'로 변경
+    const response = await api.get(`/memberships/trainer/alerts?threshold=4`);
+    setAlertCount(response.data.length);
+  } catch (error) {
+    console.error('알림 개수 조회 실패:', error);
+    setAlertCount(0);
+  }
+};
 
   if (!user) return null;
 

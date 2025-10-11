@@ -13,6 +13,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+import org.springframework.http.HttpMethod;
 
 import com.example.demo.auth.JwtAuthFilter;
 
@@ -41,7 +42,18 @@ public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Excepti
                 "/api/workout-logs/*/media",  // 정확한 패턴
                 "/api/diet-logs/*/media"      // 정확한 패턴
             ).permitAll()
+
+            // 트레이너/관리자만 접근 가능한 API 경로를 명시적으로 추가합니다.
+                .requestMatchers(
+                    "/api/memberships/register/**",
+                    "/api/memberships/trainer/**", // /trainer/alerts 포함
+                    "/api/memberships/*/decrement",
+                    "/api/trainer/**" // 혹시 모를 다른 트레이너 API를 위해 추가
+                ).hasAnyRole("TRAINER", "ADMIN")
+
             .anyRequest().authenticated()
+
+            
         )
         .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
