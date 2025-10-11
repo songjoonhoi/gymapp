@@ -13,6 +13,10 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.security.authentication.AuthenticationManager; // ✨ 빠진 import 추가
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken; // ✨ 빠진 import 추가
+import org.springframework.security.core.Authentication; // ✨ 빠진 import 추가
+
 
 import java.util.Optional;
 
@@ -52,8 +56,9 @@ public class AuthService {
                 if (req.gender() != null) {
                     member.setGender(req.gender());
                 }
-                if (req.age() != null) {
-                    member.setAge(req.age());
+                // ✨ age 대신 dateOfBirth로 수정
+                if (req.dateOfBirth() != null) {
+                    member.setDateOfBirth(req.dateOfBirth());
                 }
                 
                 member.setAccountStatus(AccountStatus.ACTIVE);
@@ -99,7 +104,7 @@ public class AuthService {
                 .email(email)
                 .password(encoder.encode(password))
                 .gender(req.gender())
-                .age(req.age())
+                .dateOfBirth(req.dateOfBirth())
                 .role(Role.OT)
                 .status(UserStatus.ACTIVE)
                 .accountStatus(AccountStatus.ACTIVE)

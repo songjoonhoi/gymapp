@@ -18,7 +18,10 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder; 
 
+
+import java.time.LocalDate; // ✨ 추가
 import java.time.LocalDateTime;
+import java.time.Period; // ✨ 추가
 import java.util.List;
 
 @Service
@@ -61,7 +64,7 @@ public class AdminService {
                     m.getRole(),
                     m.getStatus(),
                     m.getGender(),              // ✨ 추가
-                    m.getAge(),                 // ✨ 추가
+                    calculateAge(m.getDateOfBirth()), // ✨ 수정된 부분
                     m.getAccountStatus(),       // ✨ 추가
                     m.getMembershipType(),      // ✨ 추가
                     m.getRegistrationDate(),    // ✨ 추가
@@ -130,4 +133,13 @@ public class AdminService {
                 })
                 .toList();
     }
+
+    // ✨ [추가] 생년월일로 만 나이를 계산하는 헬퍼 메소드
+    private Integer calculateAge(LocalDate birthDate) {
+        if (birthDate != null) {
+            return Period.between(birthDate, LocalDate.now()).getYears();
+        }
+        return null;
+    }
+    
 }

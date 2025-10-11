@@ -53,8 +53,9 @@ public class Member extends BaseEntity {
     @Column(length = 10)
     private Gender gender;
 
-    private Integer age;
-
+    @Column(name = "date_of_birth") // ✨ 이 라인을 추가합니다.
+    private LocalDate dateOfBirth;
+    
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     @Builder.Default

@@ -12,7 +12,7 @@ public record MemberCreateRequest(
     String email,               // optional
     String password,            // optional
     Gender gender,              // ✨ 추가
-    Integer age,                // ✨ 추가
+    LocalDate dateOfBirth,                // ✨ 추가
     String membershipType,      // ✨ 추가 (회원권)
     LocalDate registrationDate, // ✨ 추가 (가입일)
     LocalDate startDate,        // ✨ 추가 (시작일)
