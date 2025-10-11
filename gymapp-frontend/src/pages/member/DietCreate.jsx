@@ -15,16 +15,38 @@ const DietCreate = () => {
   const [preview, setPreview] = useState(null);
   const [loading, setLoading] = useState(false);
   const [aiResult, setAiResult] = useState(null); // AI 분석 결과 추가
+  const [authLoading, setAuthLoading] = useState(true);
 
-  //페이지에 진입할 때 PT 회원인지 확인하는 로직
-  useEffect(() => {
-    const user = JSON.parse(localStorage.getItem('user'));
-    // 사용자가 OT(일반 회원)이면 알림을 띄우고 이전 페이지로 돌려보냅니다.
-    if (user && user.role === 'OT') {
-      alert('등록은 PT회원만 할수 있습니다.');
-      navigate(-1); // -1은 '이전 페이지로 가기'를 의미합니다.
-    }
-  }, [navigate]); // navigate 함수가 변경될 일이 없지만, 규칙상 의존성 배열에 추가합니다.
+  // ✨ [수정] 페이지 진입 시 서버에 직접 PT 회원인지 확인
+    useEffect(() => {
+        const checkAuth = async () => {
+            try {
+                const storedUser = JSON.parse(localStorage.getItem('user'));
+                if (!storedUser) {
+                    navigate('/login');
+                    return;
+                }
+                const response = await api.get(`/members/${storedUser.memberId}`);
+                const latestUser = response.data;
+
+                const updatedUser = { ...storedUser, role: latestUser.role };
+                localStorage.setItem('user', JSON.stringify(updatedUser));
+                
+                if (latestUser.role !== 'PT') {
+                    alert('PT 회원 전용 기능입니다. PT 등록 후 이용해주세요.');
+                    navigate(-1);
+                }
+            } catch (error) {
+                console.error("권한 확인 실패:", error);
+                alert("사용자 정보를 확인하는 중 오류가 발생했습니다.");
+                navigate('/home');
+            } finally {
+                setAuthLoading(false);
+            }
+        };
+
+        checkAuth();
+    }, [navigate]);
 
   const handleChange = (e) => {
     setFormData({
@@ -81,6 +103,11 @@ const DietCreate = () => {
       setLoading(false);
     }
   };
+
+  // ✨ 권한 확인이 끝나기 전에는 로딩 화면 표시
+    if (authLoading) {
+        return <div className="text-center py-20">권한을 확인하는 중...</div>;
+    }
 
   return (
     <div className="min-h-screen bg-gray-50 pb-24">

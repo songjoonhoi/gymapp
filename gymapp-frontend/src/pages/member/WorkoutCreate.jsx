@@ -14,14 +14,40 @@ const WorkoutCreate = () => {
   const [media, setMedia] = useState(null);
   const [preview, setPreview] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [authLoading, setAuthLoading] = useState(true);
 
   //페이지 로드 시 PT 회원인지 확인
-    useEffect(() => {
-        const user = JSON.parse(localStorage.getItem('user'));
-        if (user && user.role === 'OT') {
-            alert('등록은 PT회원만 할수 있습니다.');
-            navigate(-1); // 이전 페이지로 돌아가기
-        }
+   useEffect(() => {
+        const checkAuth = async () => {
+            try {
+                const storedUser = JSON.parse(localStorage.getItem('user'));
+                if (!storedUser) {
+                    navigate('/login');
+                    return;
+                }
+                // 서버에 최신 회원 정보 요청
+                const response = await api.get(`/members/${storedUser.memberId}`);
+                const latestUser = response.data;
+
+                // 최신 role로 브라우저 저장소 정보 업데이트
+                const updatedUser = { ...storedUser, role: latestUser.role };
+                localStorage.setItem('user', JSON.stringify(updatedUser));
+
+                // 최신 role로 접근 권한 확인
+                if (latestUser.role !== 'PT') {
+                    alert('PT 회원 전용 기능입니다. PT 등록 후 이용해주세요.');
+                    navigate(-1); // 이전 페이지로 돌아가기
+                }
+            } catch (error) {
+                console.error("권한 확인 실패:", error);
+                alert("사용자 정보를 확인하는 중 오류가 발생했습니다.");
+                navigate('/home');
+            } finally {
+                setAuthLoading(false); // 권한 확인 완료
+            }
+        };
+
+        checkAuth();
     }, [navigate]);
 
   const handleChange = (e) => {
@@ -71,6 +97,11 @@ const WorkoutCreate = () => {
       setLoading(false);
     }
   };
+
+  // ✨ 권한 확인이 끝나기 전에는 로딩 화면 표시
+    if (authLoading) {
+        return <div className="text-center py-20">권한을 확인하는 중...</div>;
+    }
 
   return (
     <div className="min-h-screen bg-gray-50 pb-24">
