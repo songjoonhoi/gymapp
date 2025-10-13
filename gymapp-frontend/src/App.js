@@ -5,6 +5,9 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import Login from './pages/common/Login';
 import Register from './pages/common/Register';
 
+// Admin
+import AdminDashboard from './pages/admin/AdminDashboard';
+
 // Member
 import Home from './pages/member/Home';
 import WorkoutList from './pages/member/WorkoutList';
@@ -56,6 +59,10 @@ function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           
+          {/* Admin Routes */}
+        <Route path="/admin" element={<AdminDashboard />} />
+        <Route path="/admin/dashboard" element={<AdminDashboard />} />
+
           {/* Member Routes */}
           <Route path="/home" element={<Home />} />
           <Route path="/workout" element={<WorkoutList />} />
@@ -97,6 +104,9 @@ function App() {
           <Route path="/trainer/members/:memberId/pt/:sessionId" element={<PtSessionDetail />} />
           <Route path="/trainer/members/:memberId/pt" element={<MemberPtSessions />} />
         </Routes>
+
+        
+
       </div>
     </Router>
   );
