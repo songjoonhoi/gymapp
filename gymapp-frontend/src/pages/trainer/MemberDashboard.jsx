@@ -22,10 +22,9 @@ const MemberDashboard = () => {
     try {
       const memberResponse = await api.get(`/members/${memberId}`);
       setMember(memberResponse.data);
-      console.log('API에서 받은 회원 정보:', memberResponse.data); // ✨ 확인용 로그 추가
+      console.log('API에서 받은 회원 정보:', memberResponse.data);
 
       const membershipResponse = await api.get(`/memberships/${memberId}`);
-      
       setMembership(membershipResponse.data);
 
       const statsResponse = await api.get(`/stats/${memberId}`);
@@ -57,12 +56,10 @@ const MemberDashboard = () => {
     }
   };
 
-  // ✨ 멤버십 상태 정보(D-day, 경고)를 생성하는 함수 (새로 추가)
+  // ✨ 멤버십 상태 정보 생성 함수
   const getMembershipStatusInfo = () => {
-    if (!membership || !membership.endDate) {
-      return null;
-    }
-
+    if (!membership || !membership.endDate) return null;
+    
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const endDate = new Date(membership.endDate);
@@ -71,23 +68,26 @@ const MemberDashboard = () => {
     const timeDiff = endDate.getTime() - today.getTime();
     const diffDays = Math.ceil(timeDiff / (1000 * 3600 * 24));
 
-    let dDayText = '';
+    let dDayText = `(D-${diffDays})`;
     let textColor = 'text-white';
 
     if (diffDays < 0) {
       dDayText = `(만료 ${Math.abs(diffDays)}일 지남)`;
       textColor = 'text-red-300';
     } else if (diffDays <= 14) {
-      dDayText = `(D-${diffDays})`;
       textColor = 'text-yellow-300';
-    } else {
-      dDayText = `(D-${diffDays})`;
     }
 
     return { dDayText, textColor };
   };
   
   const statusInfo = getMembershipStatusInfo();
+  
+  // ✨ 날짜 포맷팅 헬퍼 함수 추가
+  const formatDate = (dateString) => {
+    if (!dateString) return '-';
+    return new Date(dateString).toLocaleDateString('ko-KR');
+  };
 
   if (loading) {
     return (
@@ -109,19 +109,44 @@ const MemberDashboard = () => {
 
       {/* Content */}
       <div className="max-w-lg mx-auto px-4 py-6 space-y-4">
-        {/* 1. 회원 프로필 카드 */}
+        
+        {/* ✨ 1. 회원 프로필 카드 (개선된 UI) */}
         <div className="bg-white rounded-2xl shadow-md p-6">
-          <div className="flex items-center mb-4">
-            <div className="w-16 h-16 bg-primary rounded-full flex items-center justify-center text-white text-2xl font-bold mr-4">
-              {member?.name?.charAt(0) || 'U'}
-            </div>
-            <div>
-              <h2 className="text-xl font-bold text-gray-800">{member?.name}</h2>
-              <p className="text-sm text-gray-500">{member?.email}</p>
-              <p className="text-sm text-gray-500">{member?.phone}</p>
-            </div>
+          <div className="mb-4">
+            <h2 className="text-2xl font-bold text-gray-800">{member?.name}</h2>
+            <p className="text-sm text-gray-500">{member?.email}</p>
+            <p className="text-sm text-gray-500">{member?.phone}</p>
           </div>
           
+          <div className="border-t border-gray-200 my-4"></div>
+
+          {/* ✨ 그리드 레이아웃으로 정보 표시 */}
+          <div className="grid grid-cols-2 gap-y-3 text-sm">
+            <div>
+              <p className="text-gray-500">가입일</p>
+              <p className="font-semibold text-gray-800">{formatDate(member?.registrationDate)}</p>
+            </div>
+            <div>
+              <p className="text-gray-500">시작일</p>
+              <p className="font-semibold text-gray-800">{formatDate(member?.startDate)}</p>
+            </div>
+            <div>
+              <p className="text-gray-500">성별</p>
+              <p className="font-semibold text-gray-800">
+                {member?.gender === 'MALE' ? '남성' : member?.gender === 'FEMALE' ? '여성' : '-'}
+              </p>
+            </div>
+            <div>
+              <p className="text-gray-500">나이</p>
+              {/* ✨ null 체크 개선 */}
+              <p className="font-semibold text-gray-800">
+                {member?.age != null ? `${member.age}세` : '-'}
+              </p>
+            </div>
+          </div>
+
+          <div className="border-t border-gray-200 my-4"></div>
+
           <div className="flex gap-2 mb-4">
             <span className={`inline-block px-3 py-1 rounded-lg text-sm font-semibold ${
               member?.role === 'PT' 
@@ -148,7 +173,7 @@ const MemberDashboard = () => {
           </Button>
         </div>
 
-        {/* 2. 멤버십 정보 (PT 회원만) - ✨ UI 수정 */}
+        {/* 2. 멤버십 정보 (PT 회원만) */}
         {member?.role === 'PT' && membership && (
           <div className="bg-gradient-to-br from-primary to-blue-600 text-white rounded-2xl p-5 shadow-lg">
             <div className="flex justify-between items-baseline">
@@ -162,7 +187,7 @@ const MemberDashboard = () => {
             <div className="flex items-baseline gap-3">
               <p className="text-4xl font-bold">{membership.remainPT}회</p>
               {membership.remainPT <= 3 && (
-                 <p className="text-yellow-300 font-bold">⚠️재등록 필요!</p>
+                <p className="text-yellow-300 font-bold">⚠️재등록 필요!</p>
               )}
             </div>
             <div className="mt-3 pt-3 border-t border-white border-opacity-20">

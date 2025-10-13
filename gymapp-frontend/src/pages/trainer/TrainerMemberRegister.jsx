@@ -9,7 +9,7 @@ const TrainerMemberRegister = () => {
   const [formData, setFormData] = useState({
     name: '',
     gender: 'MALE',
-    age: '',
+    dateOfBirth: '', // ✨ 변경: age → dateOfBirth
     phone: '',
     membershipType: '',
     registrationDate: new Date().toISOString().split('T')[0],
@@ -25,44 +25,44 @@ const TrainerMemberRegister = () => {
   };
 
   const handleSubmit = async (e) => {
-  e.preventDefault();
-  setLoading(true);
+    e.preventDefault();
+    setLoading(true);
 
-  const payload = {
-    name: formData.name,
-    phone: formData.phone,
-    gender: formData.gender,
-    age: parseInt(formData.age),
-    membershipType: formData.membershipType || null,
-    registrationDate: formData.registrationDate || null,
-    startDate: formData.startDate || null,
-    role: 'OT'
+    // ✨ 변경: age 대신 dateOfBirth 사용
+    const payload = {
+      name: formData.name,
+      phone: formData.phone,
+      gender: formData.gender,
+      dateOfBirth: formData.dateOfBirth, // ✨ 여기 변경
+      membershipType: formData.membershipType || null,
+      registrationDate: formData.registrationDate || null,
+      startDate: formData.startDate || null,
+      role: 'OT'
+    };
+
+    console.log('===== 회원 등록 시작 =====');
+    console.log('1. 전송 데이터:', payload);
+
+    try {
+      const response = await api.post('/members', payload);
+      
+      console.log('2. 등록 성공:', response.data);
+      console.log('등록된 회원의 trainerId:', response.data.trainerId);
+      
+      alert('회원이 등록되었습니다!');
+      
+      console.log('3. 페이지 이동 시작');
+      navigate('/trainer/members', { state: { refresh: true } });
+      
+      console.log('===== 회원 등록 완료 =====');
+    } catch (error) {
+      console.error('❌ 등록 실패:', error);
+      console.error('에러 상세:', error.response?.data);
+      alert(error.response?.data?.message || '회원 등록에 실패했습니다.');
+    } finally {
+      setLoading(false);
+    }
   };
-
-  console.log('===== 회원 등록 시작 =====');
-  console.log('1. 전송 데이터:', payload);
-
-  try {
-    const response = await api.post('/members', payload);
-    
-    console.log('2. 등록 성공:', response.data);
-    console.log('등록된 회원의 trainerId:', response.data.trainerId);
-    
-    alert('회원이 등록되었습니다!');
-    
-    console.log('3. 페이지 이동 시작');
-    navigate('/trainer/members', { state: { refresh: true } });
-    
-    
-    console.log('===== 회원 등록 완료 =====');
-  } catch (error) {
-    console.error('❌ 등록 실패:', error);
-    console.error('에러 상세:', error.response?.data);
-    alert(error.response?.data?.message || '회원 등록에 실패했습니다.');
-  } finally {
-    setLoading(false);
-  }
-};
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -79,7 +79,6 @@ const TrainerMemberRegister = () => {
         <div className="bg-white rounded-2xl shadow-md p-6">
           <form onSubmit={handleSubmit} className="space-y-4">
             
-            {/* 이름 */}
             <Input
               label="이름"
               name="name"
@@ -130,18 +129,16 @@ const TrainerMemberRegister = () => {
               </div>
             </div>
 
-            {/* 연령 */}
+            {/* ✨ 생년월일로 변경 */}
             <Input
-              label="연령"
-              type="number"
-              name="age"
-              value={formData.age}
+              label="생년월일"
+              type="date"
+              name="dateOfBirth"
+              value={formData.dateOfBirth}
               onChange={handleChange}
-              placeholder="25"
               required
             />
 
-            {/* 전화번호 */}
             <Input
               label="전화번호"
               name="phone"
@@ -151,7 +148,6 @@ const TrainerMemberRegister = () => {
               required
             />
 
-            {/* 회원권 */}
             <Input
               label="회원권"
               name="membershipType"
@@ -160,7 +156,6 @@ const TrainerMemberRegister = () => {
               placeholder="예: 3개월권, 1년권"
             />
 
-            {/* 가입일 */}
             <Input
               label="가입일"
               type="date"
@@ -169,7 +164,6 @@ const TrainerMemberRegister = () => {
               onChange={handleChange}
             />
 
-            {/* 시작일 */}
             <Input
               label="시작일"
               type="date"
@@ -178,7 +172,6 @@ const TrainerMemberRegister = () => {
               onChange={handleChange}
             />
 
-            {/* 안내 메시지 */}
             <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
               <p className="text-sm text-blue-800">
                 ℹ️ <strong>자동 생성 정보</strong><br/>
