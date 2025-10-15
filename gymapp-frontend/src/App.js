@@ -7,6 +7,9 @@ import Register from './pages/common/Register';
 
 // Admin
 import AdminDashboard from './pages/admin/AdminDashboard';
+import AdminMembers from './pages/admin/AdminMembers'; 
+import AdminTrainers from './pages/admin/AdminTrainers'; 
+import AdminStatistics from './pages/admin/AdminStatistics'; 
 
 // Member
 import Home from './pages/member/Home';
@@ -61,7 +64,11 @@ function App() {
           
           {/* Admin Routes */}
         <Route path="/admin" element={<AdminDashboard />} />
-        <Route path="/admin/dashboard" element={<AdminDashboard />} />
+          <Route path="/admin/dashboard" element={<AdminDashboard />} />
+          <Route path="/admin/members" element={<AdminMembers />} />
+          <Route path="/admin/trainers" element={<AdminTrainers />} />
+          <Route path="/admin/statistics" element={<AdminStatistics />} />
+          {/* <Route path="/admin/members/:memberId" element={<AdminMemberDetail />} /> */}
 
           {/* Member Routes */}
           <Route path="/home" element={<Home />} />

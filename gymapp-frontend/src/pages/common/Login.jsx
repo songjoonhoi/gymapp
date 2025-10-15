@@ -28,11 +28,17 @@ const Login = () => {
     try {
       const response = await api.post('/auth/login', formData);
       const { accessToken, memberId, role } = response.data;
-
       localStorage.setItem('token', accessToken);
       localStorage.setItem('user', JSON.stringify({ memberId, role }));
 
-      navigate('/home');
+      // ✨ 역할에 따라 다른 페이지로 이동시키는 로직
+      if (role === 'ADMIN') {
+        navigate('/admin/dashboard');
+      } else if (role === 'TRAINER') {
+        navigate('/trainer/members'); // 트레이너는 회원 목록으로 이동 (혹은 /home도 가능)
+      } else {
+        navigate('/home');
+      }
     } catch (err) {
       setError(err.response?.data?.message || '로그인에 실패했습니다.');
     } finally {
@@ -61,7 +67,6 @@ const Login = () => {
               placeholder="이메일을 입력하세요"
               required
             />
-
             <Input
               label="비밀번호"
               type="password"
@@ -71,13 +76,11 @@ const Login = () => {
               placeholder="비밀번호를 입력하세요"
               required
             />
-
             {error && (
               <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm">
                 {error}
               </div>
             )}
-
             <Button
               type="submit"
               fullWidth
@@ -86,7 +89,6 @@ const Login = () => {
               {loading ? '로그인 중...' : '로그인'}
             </Button>
           </form>
-
           <div className="mt-6 text-center">
             <p className="text-gray-600">
               계정이 없으신가요?{' '}

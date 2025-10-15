@@ -1,27 +1,36 @@
 package com.example.demo.member;
 
 import com.example.demo.common.enums.UserStatus;
-import com.example.demo.common.enums.AccountStatus;  // ✨ 추가
+import com.example.demo.common.enums.AccountStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
+@Repository
 public interface MemberRepository extends JpaRepository<Member, Long> {
+    
+    // ✅ 기본 조회
     boolean existsByEmail(String email);
     Optional<Member> findByEmail(String email);
     boolean existsByPhone(String phone);
-    
-    // ✨ 전화번호로 조회 추가
     Optional<Member> findByPhone(String phone);
     
+    // ✅ 통계용 카운트
     long countByStatus(UserStatus status);
     long countByCreatedAtAfter(LocalDateTime date);
-    List<Member> findByTrainerId(Long trainerId);
     
-    // ✨ PENDING 회원 조회
+    // ✅ 트레이너 관련
+    List<Member> findByTrainerId(Long trainerId);
     List<Member> findByTrainerIdAndAccountStatus(Long trainerId, AccountStatus status);
+    
+    // ✅ 하드 삭제용 메서드 (Soft Delete 우회)
+    @Modifying
+    @Query(value = "DELETE FROM members WHERE id = :id", nativeQuery = true)
+    void hardDelete(@Param("id") Long id);
 }
