@@ -56,6 +56,20 @@ const MemberDashboard = () => {
     }
   };
 
+  // ✅ 뒤로가기 처리 함수
+  const handleGoBack = () => {
+    const previousPage = localStorage.getItem('previousPage');
+    
+    if (previousPage) {
+      // 관리자에서 온 경우 관리자 회원 목록으로
+      localStorage.removeItem('previousPage');
+      navigate('/admin/members');
+    } else {
+      // 트레이너는 트레이너 회원 목록으로
+      navigate('/trainer/members');
+    }
+  };
+
   // ✨ 멤버십 상태 정보 생성 함수
   const getMembershipStatusInfo = () => {
     if (!membership || !membership.endDate) return null;
@@ -102,7 +116,7 @@ const MemberDashboard = () => {
       {/* Header */}
       <div className="bg-white shadow-sm sticky top-0 z-10">
         <div className="max-w-lg mx-auto px-4 py-4 flex items-center">
-          <button onClick={() => navigate('/trainer/members')} className="text-2xl mr-3">←</button>
+          <button onClick={handleGoBack} className="text-2xl mr-3">←</button>
           <h1 className="text-2xl font-bold">{member?.name} 님</h1>
         </div>
       </div>

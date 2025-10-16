@@ -8,8 +8,11 @@ import Register from './pages/common/Register';
 // Admin
 import AdminDashboard from './pages/admin/AdminDashboard';
 import AdminMembers from './pages/admin/AdminMembers'; 
+import AdminMemberDetail from './pages/admin/AdminMemberDetail';  
 import AdminTrainers from './pages/admin/AdminTrainers'; 
-import AdminStatistics from './pages/admin/AdminStatistics'; 
+import AdminTrainerDetail from './pages/admin/AdminTrainerDetail';  
+import AdminStatistics from './pages/admin/AdminStatistics';
+import AdminMemberRegister from './pages/admin/AdminMemberRegister';
 
 // Member
 import Home from './pages/member/Home';
@@ -63,12 +66,14 @@ function App() {
           <Route path="/register" element={<Register />} />
           
           {/* Admin Routes */}
-        <Route path="/admin" element={<AdminDashboard />} />
+          <Route path="/admin" element={<AdminDashboard />} />
           <Route path="/admin/dashboard" element={<AdminDashboard />} />
           <Route path="/admin/members" element={<AdminMembers />} />
+          <Route path="/admin/members/register" element={<AdminMemberRegister />} />
+          <Route path="/admin/members/:id" element={<AdminMemberDetail />} />
           <Route path="/admin/trainers" element={<AdminTrainers />} />
+          <Route path="/admin/trainers/:id" element={<AdminTrainerDetail />} />
           <Route path="/admin/statistics" element={<AdminStatistics />} />
-          {/* <Route path="/admin/members/:memberId" element={<AdminMemberDetail />} /> */}
 
           {/* Member Routes */}
           <Route path="/home" element={<Home />} />

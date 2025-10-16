@@ -15,10 +15,16 @@ import java.util.Optional;
 @Repository
 public interface MemberRepository extends JpaRepository<Member, Long> {
     
-    // ✅ 기본 조회
-    boolean existsByEmail(String email);
+    // ✅ 이메일 중복 체크 (삭제된 회원 제외)
+    @Query("SELECT CASE WHEN COUNT(m) > 0 THEN true ELSE false END FROM Member m WHERE m.email = :email AND m.deletedAt IS NULL")
+    boolean existsByEmail(@Param("email") String email);
+    
     Optional<Member> findByEmail(String email);
-    boolean existsByPhone(String phone);
+    
+    // ✅ 전화번호 중복 체크 (삭제된 회원 제외)
+    @Query("SELECT CASE WHEN COUNT(m) > 0 THEN true ELSE false END FROM Member m WHERE m.phone = :phone AND m.deletedAt IS NULL")
+    boolean existsByPhone(@Param("phone") String phone);
+    
     Optional<Member> findByPhone(String phone);
     
     // ✅ 통계용 카운트

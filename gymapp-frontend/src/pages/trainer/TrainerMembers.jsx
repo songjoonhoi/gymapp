@@ -21,7 +21,7 @@ const TrainerMembers = () => {
       setLoading(true);
       const storedUser = JSON.parse(localStorage.getItem('user'));
       
-      if (!storedUser || storedUser.role !== 'TRAINER') {
+      if (!storedUser || (storedUser.role !== 'TRAINER' && storedUser.role !== 'ADMIN')) {
         alert('잘못된 접근입니다. 다시 로그인해주세요.');
         navigate('/login');
         return;

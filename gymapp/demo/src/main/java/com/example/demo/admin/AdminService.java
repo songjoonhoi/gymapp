@@ -244,45 +244,65 @@ public class AdminService {
     }
 
     // ✅ 트레이너 생성
-    public MemberResponse createTrainer(Map<String, Object> request) {
-        String name = (String) request.get("name");
-        String email = (String) request.get("email");
-        String phone = (String) request.get("phone");
-        String password = (String) request.get("password");
+public MemberResponse createTrainer(Map<String, Object> request) {
+    String name = (String) request.get("name");
+    String email = (String) request.get("email");
+    String phone = (String) request.get("phone");
+    String password = (String) request.get("password");
+    String genderStr = (String) request.get("gender");
+    String dateOfBirthStr = (String) request.get("dateOfBirth");
 
-        // 이메일 중복 체크
-        if (memberRepo.existsByEmail(email)) {
-            throw new IllegalArgumentException("이미 존재하는 이메일입니다.");
-        }
-
-        // 전화번호 중복 체크
-        if (phone != null && memberRepo.existsByPhone(phone)) {
-            throw new IllegalArgumentException("이미 존재하는 전화번호입니다.");
-        }
-
-        // 기본 비밀번호 설정 (전화번호 뒷자리 4자리)
-        if (password == null || password.isEmpty()) {
-            password = phone != null && phone.length() >= 4 
-                    ? phone.substring(phone.length() - 4) 
-                    : "1234";
-        }
-
-        Member trainer = Member.builder()
-                .name(name)
-                .email(email)
-                .phone(phone)
-                .password(passwordEncoder.encode(password))
-                .role(Role.TRAINER)
-                .status(UserStatus.ACTIVE)
-                .accountStatus(com.example.demo.common.enums.AccountStatus.ACTIVE)
-                .registrationDate(LocalDate.now())
-                .build();
-
-        Member savedTrainer = memberRepo.save(trainer);
-        return toMemberResponse(savedTrainer);
+    // 이메일 중복 체크
+    if (memberRepo.existsByEmail(email)) {
+        throw new IllegalArgumentException("이미 존재하는 이메일입니다.");
     }
 
-    // ✅ 트레이너 삭제 (Hard Delete)
+    // 전화번호 중복 체크 (삭제되지 않은 회원만 체크)
+    if (phone != null && !phone.isEmpty()) {
+        // @Where(clause = "deleted_at IS NULL")로 인해 삭제된 회원은 자동으로 제외됨
+        if (memberRepo.existsByPhone(phone)) {
+            throw new IllegalArgumentException("이미 존재하는 전화번호입니다.");
+        }
+    }
+
+    // 기본 비밀번호 설정 (전화번호 뒷자리 4자리)
+    if (password == null || password.isEmpty()) {
+        password = phone != null && phone.length() >= 4 
+                ? phone.substring(phone.length() - 4) 
+                : "1234";
+    }
+
+    // Gender 변환
+    com.example.demo.common.enums.Gender gender = null;
+    if (genderStr != null && !genderStr.isEmpty()) {
+        gender = com.example.demo.common.enums.Gender.valueOf(genderStr);
+    }
+
+    // 생년월일 변환
+    LocalDate dateOfBirth = null;
+    if (dateOfBirthStr != null && !dateOfBirthStr.isEmpty()) {
+        dateOfBirth = LocalDate.parse(dateOfBirthStr);
+    }
+
+    Member trainer = Member.builder()
+            .name(name)
+            .email(email)
+            .phone(phone)
+            .password(passwordEncoder.encode(password))
+            .gender(gender)
+            .dateOfBirth(dateOfBirth)
+            .role(Role.TRAINER)
+            .status(UserStatus.ACTIVE)
+            .accountStatus(com.example.demo.common.enums.AccountStatus.ACTIVE)
+            .registrationDate(LocalDate.now())
+            .build();
+
+    Member savedTrainer = memberRepo.save(trainer);
+    return toMemberResponse(savedTrainer);
+}
+
+    // ✅ 트레이너 삭제 (Hard Delete - 완전 삭제)
+@Transactional
 public void deleteTrainer(Long trainerId) {
     Member trainer = memberRepo.findById(trainerId)
             .orElseThrow(() -> new EntityNotFoundException("트레이너를 찾을 수 없습니다."));
@@ -291,15 +311,22 @@ public void deleteTrainer(Long trainerId) {
         throw new IllegalArgumentException("트레이너 계정이 아닙니다.");
     }
 
-    // 담당 회원들의 trainerId를 null로 설정
+    // 1. 담당 회원들의 trainerId를 null로 설정
     List<Member> trainees = memberRepo.findByTrainerId(trainerId);
-    trainees.forEach(trainee -> trainee.setTrainer(null));
+    for (Member trainee : trainees) {
+        trainee.setTrainer(null);
+    }
+    
+    // 2. 변경사항 즉시 반영
+    if (!trainees.isEmpty()) {
+        memberRepo.saveAll(trainees);
+        memberRepo.flush();
+    }
 
-    // ✨ 하드 삭제 (완전 삭제)
+    // 3. 트레이너 완전 삭제 (Hard Delete)
     memberRepo.hardDelete(trainerId);
-    memberRepo.flush(); // 즉시 DB에 반영
+    memberRepo.flush();
 }
-
     // ✨ 헬퍼 메서드
     private MemberResponse toMemberResponse(Member m) {
         return new MemberResponse(
