@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import Button from '../../components/Button';
 import Input from '../../components/Input';
-import api from '../../services/api';
+import api, { saveAuthData } from '../../services/api';  // ✅ saveAuthData import 추가
 
 const Login = () => {
   const navigate = useNavigate();
@@ -28,14 +28,16 @@ const Login = () => {
     try {
       const response = await api.post('/auth/login', formData);
       const { accessToken, memberId, role } = response.data;
-      localStorage.setItem('token', accessToken);
-      localStorage.setItem('user', JSON.stringify({ memberId, role }));
+      
+      // ✅ 새로운 저장 방식 사용
+      const user = { id: memberId, memberId, role };
+      saveAuthData(accessToken, user);
 
       // ✨ 역할에 따라 다른 페이지로 이동시키는 로직
       if (role === 'ADMIN') {
         navigate('/admin/dashboard');
       } else if (role === 'TRAINER') {
-        navigate('/trainer/members'); // 트레이너는 회원 목록으로 이동 (혹은 /home도 가능)
+        navigate('/trainer/members'); // 트레이너는 회원 목록으로 이동
       } else {
         navigate('/home');
       }

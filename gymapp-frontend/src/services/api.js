@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-// apiClient 대신 api라는 변수명을 사용하셨으므로 그대로 유지합니다.
+// apiClient 생성
 const apiClient = axios.create({
   baseURL: 'http://localhost:7777/api',
   headers: {
@@ -8,10 +8,72 @@ const apiClient = axios.create({
   },
 });
 
+// ✅ 현재 활성 사용자 ID 관리
+let activeUserId = localStorage.getItem('activeUserId') || 'default';
+
+// ========================
+// 🔐 Helper Functions
+// ========================
+
+// 현재 활성 사용자 설정
+export const setActiveUser = (userId) => {
+  activeUserId = String(userId);
+  localStorage.setItem('activeUserId', activeUserId);
+};
+
+// 인증 데이터 저장 (로그인 시 사용)
+export const saveAuthData = (token, user) => {
+  const userId = String(user.id);
+  localStorage.setItem(`token_${userId}`, token);
+  localStorage.setItem(`user_${userId}`, JSON.stringify(user));
+  setActiveUser(userId);
+};
+
+// 현재 활성 사용자의 인증 데이터 가져오기
+export const getAuthData = () => {
+  const token = localStorage.getItem(`token_${activeUserId}`);
+  const userStr = localStorage.getItem(`user_${activeUserId}`);
+  return {
+    token,
+    user: userStr ? JSON.parse(userStr) : null
+  };
+};
+
+// 현재 활성 사용자의 인증 데이터 삭제 (로그아웃 시 사용)
+export const clearAuthData = () => {
+  localStorage.removeItem(`token_${activeUserId}`);
+  localStorage.removeItem(`user_${activeUserId}`);
+  // activeUserId는 유지 (다른 계정으로 전환 가능하도록)
+};
+
+// 모든 저장된 계정 목록 가져오기
+export const getAllStoredUsers = () => {
+  const users = [];
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    if (key.startsWith('user_')) {
+      const userStr = localStorage.getItem(key);
+      if (userStr) {
+        try {
+          users.push(JSON.parse(userStr));
+        } catch (e) {
+          console.error('Failed to parse user:', e);
+        }
+      }
+    }
+  }
+  return users;
+};
+
+// ========================
+// 🔧 Interceptors
+// ========================
+
 // 요청 인터셉터 (JWT 토큰 자동 추가)
 apiClient.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('token');
+    // ✅ 현재 활성 사용자의 토큰 사용
+    const token = localStorage.getItem(`token_${activeUserId}`);
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -20,13 +82,13 @@ apiClient.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// 응답 인터셉ter (에러 처리)
+// 응답 인터셉터 (에러 처리)
 apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
+      // ✅ 현재 사용자의 토큰만 삭제
+      clearAuthData();
       window.location.href = '/login';
     }
     return Promise.reject(error);
@@ -78,7 +140,7 @@ export const deleteDietLog = (id) => {
 
 
 // ========================
-// 💬 Diet Comments  [ ✨ 이 부분이 추가됩니다 ✨ ]
+// 💬 Diet Comments
 // ========================
 
 // 특정 식단일지의 모든 댓글 조회
@@ -96,12 +158,16 @@ export const deleteDietComment = (logId, commentId) => {
   return apiClient.delete(`/diet-logs/${logId}/comments/${commentId}`);
 };
 
-// ✨ [추가] 특정 회원의 최근 멤버십 정보 조회
+// ========================
+// 💳 Memberships
+// ========================
+
+// 특정 회원의 최근 멤버십 정보 조회
 export const getLatestMembershipSummary = (memberId) => {
   return apiClient.get(`/memberships/member/${memberId}/latest-summary`);
 };
 
-// ✨ [추가] 특정 회원의 전체 멤버십 등록 내역 조회
+// 특정 회원의 전체 멤버십 등록 내역 조회
 export const getMembershipLogs = (memberId) => {
   return apiClient.get(`/memberships/member/${memberId}/logs`);
 };

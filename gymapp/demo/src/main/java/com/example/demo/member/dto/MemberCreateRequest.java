@@ -1,20 +1,20 @@
 package com.example.demo.member.dto;
 
 import com.example.demo.common.enums.Role;
-import com.example.demo.common.enums.Gender;  // ✨ 추가
-import jakarta.validation.constraints.Email;
+import com.example.demo.common.enums.Gender;
 import jakarta.validation.constraints.NotBlank;
-import java.time.LocalDate;  // ✨ 추가
+import java.time.LocalDate;
 
 public record MemberCreateRequest(
     @NotBlank String name,
     @NotBlank String phone,
     String email,               // optional
     String password,            // optional
-    Gender gender,              // ✨ 추가
-    LocalDate dateOfBirth,                // ✨ 추가
-    String membershipType,      // ✨ 추가 (회원권)
-    LocalDate registrationDate, // ✨ 추가 (가입일)
-    LocalDate startDate,        // ✨ 추가 (시작일)
-    Role role
+    Gender gender,
+    LocalDate dateOfBirth,
+    String membershipType,
+    LocalDate registrationDate,
+    LocalDate startDate,
+    Role role,
+    Long trainerId              // ✨ 추가!
 ) {}

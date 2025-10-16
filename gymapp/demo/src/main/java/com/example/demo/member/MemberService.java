@@ -42,7 +42,7 @@ public class MemberService {
     private final MemberRepository repo;
     private final PasswordEncoder passwordEncoder;
 
-    // ✅ 회원 생성
+    // ✅ 회원 생성 (핵심 수정!)
     public MemberResponse create(MemberCreateRequest req) {
         if (repo.existsByPhone(req.phone())) {
             throw new IllegalArgumentException("이미 사용중인 전화번호입니다.");
@@ -62,7 +62,27 @@ public class MemberService {
             password = req.phone().substring(req.phone().length() - 4);
         }
 
-        Member trainer = getCurrentAuthenticatedMember();
+        // ✨ [핵심 수정] 트레이너 배정 로직 변경
+        Member trainer = null;
+        
+        // 1. 요청에 trainerId가 있으면 해당 트레이너 찾기
+        if (req.trainerId() != null) {
+            trainer = repo.findById(req.trainerId())
+                    .orElseThrow(() -> new EntityNotFoundException("트레이너를 찾을 수 없습니다: " + req.trainerId()));
+            
+            // 트레이너 권한 확인
+            if (!trainer.getRole().isTrainer()) {
+                throw new IllegalArgumentException("선택한 사용자는 트레이너가 아닙니다.");
+            }
+        } 
+        // 2. trainerId가 없고, 현재 로그인한 사용자가 트레이너라면
+        else {
+            Member currentMember = getCurrentAuthenticatedMember();
+            if (currentMember.getRole().isTrainer()) {
+                trainer = currentMember;
+            }
+            // 관리자가 trainerId 없이 등록하면 trainer는 null
+        }
 
         Member m = Member.builder()
                 .name(req.name())
@@ -77,7 +97,7 @@ public class MemberService {
                 .role(req.role() == null ? Role.OT : req.role())
                 .status(UserStatus.ACTIVE)
                 .accountStatus(AccountStatus.PENDING)
-                .trainer(trainer)
+                .trainer(trainer)  // ✅ 올바른 트레이너 설정
                 .build();
 
         Member saved = repo.save(m);
@@ -105,16 +125,39 @@ public class MemberService {
     }
 
     @Transactional(readOnly = true)
-    public MemberResponse getWithPermission(Long id, UserPrincipal user) {
-        MemberResponse mr = get(id);
-        if (user.isAdmin() || user.getId().equals(id)) {
-            return mr;
-        }
-        if (user.isTrainer() && mr.trainerId() != null && mr.trainerId().equals(user.getId())) {
-            return mr;
-        }
-        throw new AccessDeniedException("접근 권한이 없습니다.");
+public MemberResponse getWithPermission(Long id, UserPrincipal user) {
+    MemberResponse mr = get(id);
+    
+    // ✅ 디버깅 로그 추가
+    System.out.println("========== 권한 체크 시작 ==========");
+    System.out.println("요청한 회원 ID: " + id);
+    System.out.println("현재 사용자 ID: " + user.getId());
+    System.out.println("현재 사용자 이름: " + user.getUsername());
+    System.out.println("현재 사용자 Role: " + user.getRole());
+    System.out.println("회원의 trainerId: " + mr.trainerId());
+    System.out.println("user.isAdmin(): " + user.isAdmin());
+    System.out.println("user.isTrainer(): " + user.isTrainer());
+    System.out.println("user.getId().equals(id): " + user.getId().equals(id));
+    
+    if (user.isAdmin()) {
+        System.out.println("✅ 관리자 권한으로 접근 허용");
+        return mr;
     }
+    
+    if (user.getId().equals(id)) {
+        System.out.println("✅ 본인 정보 접근 허용");
+        return mr;
+    }
+    
+    if (user.isTrainer() && mr.trainerId() != null && mr.trainerId().equals(user.getId())) {
+        System.out.println("✅ 담당 트레이너 권한으로 접근 허용");
+        return mr;
+    }
+    
+    System.out.println("❌ 접근 권한 없음 - AccessDeniedException 발생");
+    System.out.println("====================================");
+    throw new AccessDeniedException("접근 권한이 없습니다.");
+}
 
     @Transactional(readOnly = true)
     public Page<MemberResponse> listWithPermission(Pageable pageable, UserPrincipal user) {
@@ -354,7 +397,6 @@ public class MemberService {
         if (matcher.find()) {
             String dateStr = matcher.group(1).trim();
             try {
-                // yyyy. M. d 포맷을 yyyy-M-d로 변환하여 파싱
                 return LocalDate.parse(dateStr.replace(". ", "-").replace(".", "-"), DateTimeFormatter.ofPattern("yyyy-M-d"));
             } catch (Exception e) {
                 System.err.println("날짜 파싱 실패: " + dateStr);

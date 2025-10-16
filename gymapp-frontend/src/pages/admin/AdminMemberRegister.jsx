@@ -43,34 +43,44 @@ const AdminMemberRegister = () => {
   };
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
-    
-    if (!formData.name || !formData.phone) {
-      alert('이름과 전화번호는 필수입니다.');
-      return;
-    }
+  e.preventDefault();
+  
+  if (!formData.name || !formData.phone) {
+    alert('이름과 전화번호는 필수입니다.');
+    return;
+  }
 
-    if (!formData.trainerId) {
-      alert('담당 트레이너를 선택해주세요.');
-      return;
-    }
+  if (!formData.trainerId) {
+    alert('담당 트레이너를 선택해주세요.');
+    return;
+  }
 
-    setLoading(true);
+  setLoading(true);
 
-    try {
-      await api.post('/members', {
-        ...formData,
-        role: 'OT' // 기본적으로 OT로 등록
-      });
-      alert('회원이 등록되었습니다!');
-      navigate('/admin/members');
-    } catch (error) {
-      alert(error.response?.data?.message || '회원 등록에 실패했습니다.');
-      console.error(error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  try {
+    // ✅ 명시적으로 모든 필드 포함
+    await api.post('/members', {
+      name: formData.name,
+      phone: formData.phone,
+      email: formData.email || null,
+      password: formData.password || null,
+      gender: formData.gender,
+      dateOfBirth: formData.dateOfBirth || null,
+      trainerId: formData.trainerId,  // ✅ 명시적으로 포함
+      membershipType: formData.membershipType || null,
+      registrationDate: formData.registrationDate || null,
+      startDate: formData.startDate || null,
+      role: 'OT'
+    });
+    alert('회원이 등록되었습니다!');
+    navigate('/admin/members');
+  } catch (error) {
+    alert(error.response?.data?.message || '회원 등록에 실패했습니다.');
+    console.error(error);
+  } finally {
+    setLoading(false);
+  }
+};
 
   return (
     <div className="min-h-screen bg-gray-50 pb-24">
