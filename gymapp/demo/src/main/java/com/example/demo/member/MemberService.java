@@ -405,4 +405,11 @@ public MemberResponse getWithPermission(Long id, UserPrincipal user) {
         }
         return null;
     }
+
+    @Transactional(readOnly = true)
+public List<MemberResponse> getTrainerList() {
+    return repo.findByRole(Role.TRAINER).stream()
+            .map(this::toRes)
+            .toList();
+}
 }

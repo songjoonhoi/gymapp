@@ -4,6 +4,7 @@ import com.example.demo.common.enums.UserStatus;
 import com.example.demo.common.enums.Role;
 import com.example.demo.member.Member;
 import com.example.demo.member.MemberRepository;
+import com.example.demo.member.dto.MemberCreateRequest;
 import com.example.demo.member.dto.MemberResponse;
 import com.example.demo.admin.dto.MemberStatsResponse;
 import com.example.demo.admin.dto.MemberSummaryStatsResponse;
@@ -354,4 +355,62 @@ public void deleteTrainer(Long trainerId) {
         }
         return null;
     }
+
+    /**
+ * ✨ 관리자 회원 생성
+ */
+public MemberResponse createMember(MemberCreateRequest req) {
+    // 전화번호 중복 체크
+    if (memberRepo.existsByPhone(req.phone())) {
+        throw new IllegalArgumentException("이미 사용중인 전화번호입니다.");
+    }
+    
+    // 이메일 설정
+    String email = req.email();
+    if (email == null || email.isEmpty()) {
+        email = req.phone() + "@gymapp.com";
+    } else {
+        if (memberRepo.existsByEmail(email)) {
+            throw new IllegalArgumentException("이미 존재하는 이메일입니다.");
+        }
+    }
+    
+    // 비밀번호 설정
+    String password = req.password();
+    if (password == null || password.isEmpty()) {
+        password = req.phone().substring(req.phone().length() - 4);
+    }
+
+    // 트레이너 설정
+    Member trainer = null;
+    if (req.trainerId() != null) {
+        trainer = memberRepo.findById(req.trainerId())
+                .orElseThrow(() -> new EntityNotFoundException("트레이너를 찾을 수 없습니다: " + req.trainerId()));
+        
+        if (!trainer.getRole().isTrainer()) {
+            throw new IllegalArgumentException("선택한 사용자는 트레이너가 아닙니다.");
+        }
+    }
+
+    // 회원 생성
+    Member member = Member.builder()
+            .name(req.name())
+            .phone(req.phone())
+            .email(email)
+            .password(passwordEncoder.encode(password))
+            .gender(req.gender())
+            .dateOfBirth(req.dateOfBirth())
+            .membershipType(req.membershipType())
+            .registrationDate(req.registrationDate() != null ? req.registrationDate() : LocalDate.now())
+            .startDate(req.startDate())
+            .role(req.role() != null ? req.role() : Role.OT)
+            .status(UserStatus.ACTIVE)
+            .accountStatus(com.example.demo.common.enums.AccountStatus.ACTIVE)
+            .trainer(trainer)
+            .build();
+
+    Member saved = memberRepo.save(member);
+    return toMemberResponse(saved);
+}
+
 }

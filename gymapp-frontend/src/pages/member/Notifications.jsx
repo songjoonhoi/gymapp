@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import BottomNav from '../../components/BottomNav';
 import Card from '../../components/Card';
-import api from '../../services/api';
+import api, { getAuthData } from '../../services/api'; // ✅ 추가
 
 const Notifications = () => {
   const navigate = useNavigate();
@@ -16,7 +16,14 @@ const Notifications = () => {
 
   const fetchNotifications = async () => {
     try {
-      const user = JSON.parse(localStorage.getItem('user'));
+      // ✅ getAuthData 사용
+      const { user } = getAuthData();
+      
+      if (!user) {
+        navigate('/login');
+        return;
+      }
+      
       const response = await api.get(`/notifications/${user.memberId}`);
       setNotifications(response.data);
       
@@ -31,7 +38,14 @@ const Notifications = () => {
 
   const handleMarkAllRead = async () => {
     try {
-      const user = JSON.parse(localStorage.getItem('user'));
+      // ✅ getAuthData 사용
+      const { user } = getAuthData();
+      
+      if (!user) {
+        navigate('/login');
+        return;
+      }
+      
       await api.put(`/notifications/${user.memberId}/mark-all-read`);
       fetchNotifications();
     } catch (error) {
@@ -73,7 +87,6 @@ const Notifications = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 pb-24">
-      {/* Header */}
       <div className="bg-white shadow-sm sticky top-0 z-10">
         <div className="max-w-lg mx-auto px-4 py-4 flex justify-between items-center">
           <div className="flex items-center">
@@ -96,7 +109,6 @@ const Notifications = () => {
         </div>
       </div>
 
-      {/* Content */}
       <div className="max-w-lg mx-auto px-4 py-6">
         {loading ? (
           <div className="text-center py-10 text-gray-500">로딩 중...</div>

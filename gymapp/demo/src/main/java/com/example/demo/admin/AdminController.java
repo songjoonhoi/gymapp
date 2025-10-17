@@ -4,6 +4,7 @@ import com.example.demo.auth.UserPrincipal;
 import com.example.demo.common.enums.Role;
 import com.example.demo.common.enums.UserStatus;
 import com.example.demo.member.dto.MemberResponse;
+import com.example.demo.member.dto.MemberCreateRequest; // ✨ 추가
 import com.example.demo.admin.dto.MemberStatsResponse;
 import com.example.demo.admin.dto.MemberSummaryStatsResponse;
 import com.example.demo.admin.dto.TrainerStatsResponse;
@@ -13,6 +14,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+import jakarta.validation.Valid; // ✨ 추가
 
 import java.util.List;
 import java.util.Map;
@@ -29,6 +31,13 @@ public class AdminController {
     @GetMapping("/members")
     public List<MemberResponse> getAllMembers() {
         return adminService.getAllMembers();
+    }
+
+    // ✨ 회원 생성 API 추가
+    @PostMapping("/members")
+    public ResponseEntity<MemberResponse> createMember(@Valid @RequestBody MemberCreateRequest req) {
+        MemberResponse created = adminService.createMember(req);
+        return ResponseEntity.ok(created);
     }
 
     // ✅ 회원 상태 변경
@@ -89,18 +98,17 @@ public class AdminController {
         return adminService.getTrainerStats();
     }
 
-    // ✅ 트레이너 생성 (77-81줄)
-@PostMapping("/trainers")
-public ResponseEntity<MemberResponse> createTrainer(@RequestBody Map<String, Object> request) {
-    MemberResponse trainer = adminService.createTrainer(request);
-    return ResponseEntity.ok(trainer);
-}
+    // ✅ 트레이너 생성
+    @PostMapping("/trainers")
+    public ResponseEntity<MemberResponse> createTrainer(@RequestBody Map<String, Object> request) {
+        MemberResponse trainer = adminService.createTrainer(request);
+        return ResponseEntity.ok(trainer);
+    }
 
-// ✅ 트레이너 삭제 (83-88줄)
-@DeleteMapping("/trainers/{trainerId}")
-public ResponseEntity<Void> deleteTrainer(@PathVariable Long trainerId) {
-    adminService.deleteTrainer(trainerId);
-    return ResponseEntity.noContent().build();
-}
-
+    // ✅ 트레이너 삭제
+    @DeleteMapping("/trainers/{trainerId}")
+    public ResponseEntity<Void> deleteTrainer(@PathVariable Long trainerId) {
+        adminService.deleteTrainer(trainerId);
+        return ResponseEntity.noContent().build();
+    }
 }

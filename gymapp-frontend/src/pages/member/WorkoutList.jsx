@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import BottomNav from '../../components/BottomNav';
 import Card from '../../components/Card';
-import api from '../../services/api';
+import api, { getAuthData } from '../../services/api'; // ✅ 추가
 
 const WorkoutList = () => {
   const navigate = useNavigate();
@@ -15,7 +15,14 @@ const WorkoutList = () => {
 
   const fetchLogs = async () => {
     try {
-      const user = JSON.parse(localStorage.getItem('user'));
+      // ✅ getAuthData 사용
+      const { user } = getAuthData();
+      
+      if (!user) {
+        navigate('/login');
+        return;
+      }
+      
       const response = await api.get(`/workout-logs/member/${user.memberId}`);
       setLogs(response.data);
     } catch (error) {
@@ -39,7 +46,6 @@ const WorkoutList = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 pb-24">
-      {/* Header */}
       <div className="bg-white shadow-sm sticky top-0 z-10">
         <div className="max-w-lg mx-auto px-4 py-4 flex justify-between items-center">
           <div className="flex items-center">
@@ -55,15 +61,12 @@ const WorkoutList = () => {
         </div>
       </div>
 
-      {/* Content */}
       <div className="max-w-lg mx-auto px-4 py-6">
-        {/* 주간 요약 */}
         <div className="bg-primary text-white rounded-2xl p-5 mb-6">
           <h2 className="text-lg font-semibold mb-1">이번 주 운동</h2>
           <p className="text-3xl font-bold">{logs.length}회 완료 🎉</p>
         </div>
 
-        {/* 운동 기록 리스트 */}
         {loading ? (
           <div className="text-center py-10 text-gray-500">로딩 중...</div>
         ) : logs.length === 0 ? (
@@ -84,12 +87,12 @@ const WorkoutList = () => {
                 onClick={() => navigate(`/workout/${log.id}`)}
               >
                 {log.mediaPreviewUrl && (
-                    <img
-                        src={`http://localhost:7777${log.mediaPreviewUrl}`}  // localhost 추가
-                        alt={log.title}
-                        className="w-full h-48 object-contain bg-gray-100 rounded-xl mb-4"
-                    />
-                    )}
+                  <img
+                    src={`http://localhost:7777${log.mediaPreviewUrl}`}
+                    alt={log.title}
+                    className="w-full h-48 object-contain bg-gray-100 rounded-xl mb-4"
+                  />
+                )}
                 <h3 className="text-xl font-bold text-gray-800 mb-2">{log.title}</h3>
                 <p className="text-gray-600 mb-3 line-clamp-2">{log.content}</p>
                 <p className="text-sm text-gray-400">{formatDate(log.createdAt)}</p>

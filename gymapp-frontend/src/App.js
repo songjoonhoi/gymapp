@@ -13,6 +13,7 @@ import AdminTrainers from './pages/admin/AdminTrainers';
 import AdminTrainerDetail from './pages/admin/AdminTrainerDetail';  
 import AdminStatistics from './pages/admin/AdminStatistics';
 import AdminMemberRegister from './pages/admin/AdminMemberRegister';
+import AdminTrainerRegister from './pages/admin/AdminTrainerRegister';
 
 // Member
 import Home from './pages/member/Home';
@@ -74,6 +75,7 @@ function App() {
           <Route path="/admin/trainers" element={<AdminTrainers />} />
           <Route path="/admin/trainers/:id" element={<AdminTrainerDetail />} />
           <Route path="/admin/statistics" element={<AdminStatistics />} />
+          <Route path="/admin/trainers/register" element={<AdminTrainerRegister />} />
 
           {/* Member Routes */}
           <Route path="/home" element={<Home />} />

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import BottomNav from '../../components/BottomNav';
 import Card from '../../components/Card';
-import api from '../../services/api';
+import api, { getAuthData } from '../../services/api'; // ✅ 추가
 
 const TrainerMembers = () => {
   const navigate = useNavigate();
@@ -19,7 +19,8 @@ const TrainerMembers = () => {
   const fetchMembers = async () => {
     try {
       setLoading(true);
-      const storedUser = JSON.parse(localStorage.getItem('user'));
+      // ✅ getAuthData 사용
+      const { user: storedUser } = getAuthData();
       
       if (!storedUser || (storedUser.role !== 'TRAINER' && storedUser.role !== 'ADMIN')) {
         alert('잘못된 접근입니다. 다시 로그인해주세요.');
@@ -39,17 +40,14 @@ const TrainerMembers = () => {
 
   useEffect(() => {
     fetchMembers();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // location.state 변경 감지
   useEffect(() => {
     if (location.state?.refresh) {
       fetchMembers();
       navigate(location.pathname, { replace: true, state: {} });
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [location.state]); // ✨ 이 부분을 수정하여 오류를 해결했습니다.
+  }, [location.state]);
 
   const handleFileChange = (event) => {
     setSelectedFile(event.target.files[0]);
@@ -100,13 +98,11 @@ const TrainerMembers = () => {
     return result;
   }, [members, activeTab, searchQuery]);
 
-  // 회원권 상태 아이콘을 생성하는 함수
   const getMemberStatusIndicators = (member) => {
     const indicators = [];
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    // 1. 만료 여부 확인
     if (member.membershipEndDate) {
       const endDate = new Date(member.membershipEndDate);
       endDate.setHours(0, 0, 0, 0);
@@ -121,7 +117,6 @@ const TrainerMembers = () => {
       }
     }
 
-    // 2. PT 잔여 횟수 확인 (PT 회원만)
     if (member.role === 'PT' && member.remainPT <= 3) {
       indicators.push(<span key="low-pt" title={`PT 잔여 ${member.remainPT}회`}>⚠️</span>);
     }

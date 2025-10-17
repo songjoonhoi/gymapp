@@ -67,7 +67,6 @@ const AdminMemberDetail = () => {
     }
   };
 
-  // ✅ 회원 대시보드로 이동 (이전 페이지 저장)
   const handleNavigateToDashboard = () => {
     localStorage.setItem('previousPage', `/admin/members/${id}`);
     navigate(`/trainer/members/${id}`);
@@ -150,10 +149,13 @@ const AdminMemberDetail = () => {
               <p className="text-sm text-gray-600 mb-1">회원권</p>
               <p className="font-semibold text-gray-800">{member.membershipType || '-'}</p>
             </div>
+            {/* ✅ 계정 상태 → 회원 상태로 변경하고 status 사용 */}
             <div>
-              <p className="text-sm text-gray-600 mb-1">계정 상태</p>
-              <p className="font-semibold text-gray-800">
-                {member.accountStatus === 'ACTIVE' ? '활성' : '대기'}
+              <p className="text-sm text-gray-600 mb-1">회원 상태</p>
+              <p className={`font-semibold ${
+                member.status === 'ACTIVE' ? 'text-green-700' : 'text-gray-700'
+              }`}>
+                {member.status === 'ACTIVE' ? '활성' : '비활성'}
               </p>
             </div>
           </div>

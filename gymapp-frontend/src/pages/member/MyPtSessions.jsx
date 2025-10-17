@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import BottomNav from '../../components/BottomNav';
 import Card from '../../components/Card';
-import api from '../../services/api';
+import api, { getAuthData } from '../../services/api'; // ✅ 추가
 
 const MyPtSessions = () => {
   const navigate = useNavigate();
@@ -16,13 +16,17 @@ const MyPtSessions = () => {
 
   const fetchData = async () => {
     try {
-      const user = JSON.parse(localStorage.getItem('user'));
+      // ✅ getAuthData 사용
+      const { user } = getAuthData();
+      
+      if (!user) {
+        navigate('/login');
+        return;
+      }
 
-      // PT 세션 목록
       const sessionsResponse = await api.get(`/pt-sessions/member/${user.memberId}`);
       setSessions(sessionsResponse.data);
 
-      // 회원권 정보
       const membershipResponse = await api.get(`/memberships/${user.memberId}`);
       setMembership(membershipResponse.data);
     } catch (error) {
@@ -65,7 +69,6 @@ const MyPtSessions = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 pb-24">
-      {/* Header */}
       <div className="bg-white shadow-sm sticky top-0 z-10">
         <div className="max-w-lg mx-auto px-4 py-4 flex items-center">
           <button onClick={() => navigate('/home')} className="text-2xl mr-3">
@@ -75,9 +78,7 @@ const MyPtSessions = () => {
         </div>
       </div>
 
-      {/* Content */}
       <div className="max-w-lg mx-auto px-4 py-6">
-        {/* PT 잔여 횟수 */}
         {membership && (
           <div className="bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-2xl p-5 mb-6 shadow-lg">
             <h2 className="text-lg font-semibold mb-3">PT 잔여 횟수</h2>
@@ -97,7 +98,6 @@ const MyPtSessions = () => {
           </div>
         )}
 
-        {/* 이번 달 PT 횟수 */}
         <div className="bg-white rounded-2xl p-5 mb-6 shadow-md">
           <h3 className="text-lg font-bold text-gray-800 mb-2">이번 달 PT</h3>
           <p className="text-3xl font-bold text-primary">
@@ -113,7 +113,6 @@ const MyPtSessions = () => {
           </p>
         </div>
 
-        {/* PT 세션 리스트 */}
         <h3 className="text-xl font-bold text-gray-800 mb-4">전체 PT 이력</h3>
         {sessions.length === 0 ? (
           <div className="text-center py-10">

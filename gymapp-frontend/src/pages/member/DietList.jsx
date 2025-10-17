@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import BottomNav from '../../components/BottomNav';
 import Card from '../../components/Card';
-import api from '../../services/api';
+import api, { getAuthData } from '../../services/api'; // ✅ 추가
 
 const DietList = () => {
   const navigate = useNavigate();
@@ -16,11 +16,17 @@ const DietList = () => {
 
   const fetchLogs = async () => {
     try {
-      const user = JSON.parse(localStorage.getItem('user'));
+      // ✅ getAuthData 사용
+      const { user } = getAuthData();
+      
+      if (!user) {
+        navigate('/login');
+        return;
+      }
+      
       const response = await api.get(`/diet-logs/member/${user.memberId}`);
       setLogs(response.data);
       
-      // 오늘 총 칼로리 계산
       const today = new Date().toDateString();
       const todayCalories = response.data
         .filter(log => new Date(log.createdAt).toDateString() === today)
@@ -47,7 +53,6 @@ const DietList = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 pb-24">
-      {/* Header */}
       <div className="bg-white shadow-sm sticky top-0 z-10">
         <div className="max-w-lg mx-auto px-4 py-4 flex justify-between items-center">
           <div className="flex items-center">
@@ -63,15 +68,12 @@ const DietList = () => {
         </div>
       </div>
 
-      {/* Content */}
       <div className="max-w-lg mx-auto px-4 py-6">
-        {/* 칼로리 요약 - 간단하게 */}
-            <div className="bg-green-500 text-white rounded-2xl p-5 mb-6">
-            <h2 className="text-lg font-semibold mb-1">오늘 총 칼로리</h2>
-            <p className="text-3xl font-bold">{totalCalories} kcal</p>
-            </div>
+        <div className="bg-green-500 text-white rounded-2xl p-5 mb-6">
+          <h2 className="text-lg font-semibold mb-1">오늘 총 칼로리</h2>
+          <p className="text-3xl font-bold">{totalCalories} kcal</p>
+        </div>
 
-        {/* 식단 기록 리스트 */}
         {loading ? (
           <div className="text-center py-10 text-gray-500">로딩 중...</div>
         ) : logs.length === 0 ? (

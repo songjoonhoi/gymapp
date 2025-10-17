@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import Button from '../../components/Button';
 import Input from '../../components/Input';
-import DateInput from '../../components/DateInput'; // ✅ 추가
+import DateInput from '../../components/DateInput';
 import api from '../../services/api';
 
-const Register = () => {
+const AdminTrainerRegister = () => {
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
     name: '',
@@ -14,13 +14,12 @@ const Register = () => {
     password: '',
     confirmPassword: '',
     gender: 'MALE',
-    dateOfBirth: '', // ✅ age → dateOfBirth
+    dateOfBirth: '',
   });
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
-  const [emailAuto, setEmailAuto] = useState(true); // ✅ 이메일 자동 생성 여부
+  const [emailAuto, setEmailAuto] = useState(true);
 
-  // ✅ 전화번호 입력 시 이메일 자동 생성
   useEffect(() => {
     if (emailAuto && formData.phone) {
       const cleaned = formData.phone.replace(/\D/g, '');
@@ -41,7 +40,6 @@ const Register = () => {
       [name]: value,
     });
 
-    // ✅ 이메일을 직접 수정하면 자동 생성 해제
     if (name === 'email') {
       setEmailAuto(false);
     }
@@ -66,8 +64,8 @@ const Register = () => {
       newErrors.email = '올바른 이메일을 입력해주세요.';
     }
 
-    if (formData.password && formData.password.length < 8) {
-      newErrors.password = '비밀번호는 8자 이상이어야 합니다.';
+    if (formData.password && formData.password.length < 4) {
+      newErrors.password = '비밀번호는 4자 이상이어야 합니다.';
     }
 
     if (formData.password && formData.password !== formData.confirmPassword) {
@@ -86,45 +84,55 @@ const Register = () => {
     setLoading(true);
 
     try {
-      await api.post('/auth/register', {
+      const submitData = {
         name: formData.name,
         phone: formData.phone,
         email: formData.email || null,
         password: formData.password || null,
         gender: formData.gender,
         dateOfBirth: formData.dateOfBirth,
-        trainerId: null,
-      });
+      };
 
-      alert('회원가입이 완료되었습니다!');
-      navigate('/login');
+      await api.post('/admin/trainers', submitData);
+      alert('트레이너가 등록되었습니다!');
+      navigate('/admin/trainers');
     } catch (err) {
-      setErrors({ submit: err.response?.data?.message || '회원가입에 실패했습니다.' });
+      console.error('트레이너 등록 실패:', err);
+      setErrors({ 
+        submit: err.response?.data?.message || '트레이너 등록에 실패했습니다.' 
+      });
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8 px-4">
-      <div className="max-w-md mx-auto">
-        <div className="mb-6">
-          <Link to="/login" className="text-primary text-lg">← 돌아가기</Link>
-          <h1 className="text-3xl font-bold mt-4">회원가입</h1>
+    <div className="min-h-screen bg-gray-50 pb-24">
+      {/* Header */}
+      <div className="bg-white shadow-sm sticky top-0 z-10">
+        <div className="max-w-lg mx-auto px-4 py-4 flex items-center">
+          <button onClick={() => navigate('/admin/trainers')} className="text-2xl mr-3">
+            ←
+          </button>
+          <h1 className="text-2xl font-bold">새 트레이너 등록</h1>
         </div>
+      </div>
 
-        <div className="bg-white rounded-2xl shadow-lg p-8">
-          <form onSubmit={handleSubmit}>
+      {/* Content */}
+      <div className="max-w-lg mx-auto px-4 py-6">
+        <div className="bg-white rounded-2xl shadow-lg p-6">
+          <form onSubmit={handleSubmit} className="space-y-4">
             <Input
               label="이름"
               name="name"
               value={formData.name}
               onChange={handleChange}
               error={errors.name}
+              placeholder="홍길동"
               required
             />
 
-            <div className="mb-4">
+            <div>
               <label className="block text-base font-semibold text-gray-700 mb-2">
                 성별 <span className="text-red-500">*</span>
               </label>
@@ -164,7 +172,6 @@ const Register = () => {
               </div>
             </div>
 
-            {/* ✅ DateInput 컴포넌트 사용 */}
             <DateInput
               label="생년월일"
               name="dateOfBirth"
@@ -174,7 +181,6 @@ const Register = () => {
               required
             />
 
-            {/* ✅ 전화번호 자동 포맷팅 */}
             <Input
               label="전화번호"
               name="phone"
@@ -182,12 +188,11 @@ const Register = () => {
               onChange={handleChange}
               error={errors.phone}
               placeholder="010-1234-5678"
-              autoFormat={true} // ✅ 자동 포맷 활성화
+              autoFormat={true}
               required
             />
 
-            {/* ✅ 이메일 자동 생성 + 수동 입력 가능 */}
-            <div className="mb-4">
+            <div>
               <Input
                 label="이메일 (선택사항)"
                 type="email"
@@ -198,7 +203,7 @@ const Register = () => {
                 placeholder="입력하지 않으면 자동 생성됩니다"
               />
               {emailAuto && formData.phone && (
-                <p className="text-xs text-blue-600 mt-1">
+                <p className="text-xs text-blue-600 -mt-2 mb-2">
                   💡 자동 생성: {formData.phone.replace(/\D/g, '')}@gymapp.com
                 </p>
               )}
@@ -226,27 +231,35 @@ const Register = () => {
               />
             )}
 
-            <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 mb-4">
-              <p className="text-sm text-blue-800">
-                💡 이메일/비밀번호를 입력하지 않으면:<br/>
-                • 이메일: {formData.phone ? formData.phone.replace(/\D/g, '') : '전화번호'}@gymapp.com<br/>
-                • 비밀번호: 전화번호 뒷자리 4자리
+            <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+              <p className="text-sm text-blue-800 font-semibold mb-2">
+                💡 입력하지 않은 정보
               </p>
+              <ul className="text-sm text-blue-700 space-y-1">
+                <li>• 이메일: {formData.phone ? `${formData.phone.replace(/\D/g, '')}@gymapp.com` : '전화번호@gymapp.com'}</li>
+                <li>• 비밀번호: 전화번호 뒷자리 4자리</li>
+              </ul>
             </div>
 
             {errors.submit && (
-              <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm">
+              <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm">
                 {errors.submit}
               </div>
             )}
 
-            <Button
-              type="submit"
-              fullWidth
-              disabled={loading}
-            >
-              {loading ? '가입 중...' : '가입하기'}
-            </Button>
+            <div className="flex gap-3 pt-4">
+              <Button
+                type="button"
+                variant="secondary"
+                fullWidth
+                onClick={() => navigate('/admin/trainers')}
+              >
+                취소
+              </Button>
+              <Button type="submit" fullWidth disabled={loading}>
+                {loading ? '등록 중...' : '등록하기'}
+              </Button>
+            </div>
           </form>
         </div>
       </div>
@@ -254,4 +267,4 @@ const Register = () => {
   );
 };
 
-export default Register;
+export default AdminTrainerRegister;

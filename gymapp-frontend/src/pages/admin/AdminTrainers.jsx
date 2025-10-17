@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import Card from '../../components/Card';
 import Button from '../../components/Button';
 import Input from '../../components/Input';
+import DateInput from '../../components/DateInput'; // ✅ 추가
 import api from '../../services/api';
 
 const AdminTrainers = () => {
@@ -18,10 +19,24 @@ const AdminTrainers = () => {
     gender: 'MALE',
     dateOfBirth: '',
   });
+  const [emailAuto, setEmailAuto] = useState(true); // ✅ 추가
 
   useEffect(() => {
     fetchTrainers();
   }, []);
+
+  // ✅ 전화번호 입력 시 이메일 자동 생성
+  useEffect(() => {
+    if (emailAuto && formData.phone) {
+      const cleaned = formData.phone.replace(/\D/g, '');
+      if (cleaned.length >= 10) {
+        setFormData(prev => ({
+          ...prev,
+          email: `${cleaned}@gymapp.com`
+        }));
+      }
+    }
+  }, [formData.phone, emailAuto]);
 
   const fetchTrainers = async () => {
     try {
@@ -36,10 +51,17 @@ const AdminTrainers = () => {
   };
 
   const handleChange = (e) => {
+    const { name, value } = e.target;
+    
     setFormData({
       ...formData,
-      [e.target.name]: e.target.value,
+      [name]: value,
     });
+
+    // ✅ 이메일 직접 수정 시 자동 생성 해제
+    if (name === 'email') {
+      setEmailAuto(false);
+    }
   };
 
   const handleCreate = async (e) => {
@@ -61,6 +83,7 @@ const AdminTrainers = () => {
         gender: 'MALE',
         dateOfBirth: '',
       });
+      setEmailAuto(true); // ✅ 리셋
       fetchTrainers();
     } catch (error) {
       alert(error.response?.data?.message || '트레이너 생성에 실패했습니다.');
@@ -133,47 +156,60 @@ const AdminTrainers = () => {
                   placeholder="홍길동"
                   required
                 />
-                <Input
-                  label="이메일"
-                  type="email"
-                  name="email"
-                  value={formData.email}
-                  onChange={handleChange}
-                  placeholder="trainer@gymapp.com"
-                  required
-                />
+                
+                {/* ✅ 전화번호 자동 포맷팅 */}
                 <Input
                   label="전화번호"
                   name="phone"
                   value={formData.phone}
                   onChange={handleChange}
                   placeholder="010-1234-5678"
+                  autoFormat={true}
                   required
                 />
+                
+                {/* ✅ 이메일 자동 생성 */}
+                <div className="md:col-span-2">
+                  <Input
+                    label="이메일 (선택사항)"
+                    type="email"
+                    name="email"
+                    value={formData.email}
+                    onChange={handleChange}
+                    placeholder="입력하지 않으면 자동 생성됩니다"
+                  />
+                  {emailAuto && formData.phone && (
+                    <p className="text-xs text-blue-600 mt-1">
+                      💡 자동 생성: {formData.phone.replace(/\D/g, '')}@gymapp.com
+                    </p>
+                  )}
+                </div>
+
                 <Input
-                  label="비밀번호"
+                  label="비밀번호 (선택사항)"
                   type="password"
                   name="password"
                   value={formData.password}
                   onChange={handleChange}
-                  placeholder="8자 이상"
-                  required
+                  placeholder="입력하지 않으면 전화번호 뒷자리 4자리"
                 />
-                <Input
+                
+                {/* ✅ DateInput 사용 */}
+                <DateInput
                   label="생년월일"
-                  type="date"
                   name="dateOfBirth"
                   value={formData.dateOfBirth}
                   onChange={handleChange}
                   required
                 />
-                <div>
+                
+                <div className="md:col-span-2">
                   <label className="block text-base font-semibold text-gray-700 mb-2">
                     성별 <span className="text-red-500">*</span>
                   </label>
                   <div className="grid grid-cols-2 gap-3">
-                    <label className={`p-3 border-2 rounded-xl cursor-pointer text-center ${
-                      formData.gender === 'MALE' ? 'border-primary bg-blue-50' : 'border-gray-200'
+                    <label className={`p-3 border-2 rounded-xl cursor-pointer text-center transition-all ${
+                      formData.gender === 'MALE' ? 'border-primary bg-blue-50 font-semibold' : 'border-gray-200 hover:border-gray-300'
                     }`}>
                       <input
                         type="radio"
@@ -186,8 +222,8 @@ const AdminTrainers = () => {
                       <span className="text-xl block mb-1">👨</span>
                       <span className="text-sm">남</span>
                     </label>
-                    <label className={`p-3 border-2 rounded-xl cursor-pointer text-center ${
-                      formData.gender === 'FEMALE' ? 'border-primary bg-blue-50' : 'border-gray-200'
+                    <label className={`p-3 border-2 rounded-xl cursor-pointer text-center transition-all ${
+                      formData.gender === 'FEMALE' ? 'border-primary bg-blue-50 font-semibold' : 'border-gray-200 hover:border-gray-300'
                     }`}>
                       <input
                         type="radio"
@@ -203,6 +239,16 @@ const AdminTrainers = () => {
                   </div>
                 </div>
               </div>
+
+              {/* ✅ 안내 메시지 추가 */}
+              <div className="bg-blue-50 border border-blue-200 rounded-xl p-3">
+                <p className="text-sm text-blue-800">
+                  💡 이메일/비밀번호를 입력하지 않으면:<br/>
+                  • 이메일: {formData.phone ? formData.phone.replace(/\D/g, '') : '전화번호'}@gymapp.com<br/>
+                  • 비밀번호: 전화번호 뒷자리 4자리
+                </p>
+              </div>
+
               <Button type="submit" fullWidth disabled={loading}>
                 {loading ? '생성 중...' : '트레이너 생성'}
               </Button>

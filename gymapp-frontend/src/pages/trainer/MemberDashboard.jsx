@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import BottomNav from '../../components/BottomNav';
 import Card from '../../components/Card';
 import Button from '../../components/Button';
-import api from '../../services/api';
+import api from '../../services/api'; // ✅ 이 줄이 한 번만 있어야 합니다
 
 const MemberDashboard = () => {
   const navigate = useNavigate();

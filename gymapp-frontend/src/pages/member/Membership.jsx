@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import BottomNav from '../../components/BottomNav';
-import api from '../../services/api';
+import api, { getAuthData } from '../../services/api'; // ✅ 추가
 
 const Membership = () => {
   const navigate = useNavigate();
@@ -15,20 +15,26 @@ const Membership = () => {
 
   const fetchData = async () => {
     try {
-      const storedUser = JSON.parse(localStorage.getItem('user'));
+      // ✅ getAuthData 사용
+      const { user: storedUser } = getAuthData();
+      
+      if (!storedUser) {
+        navigate('/login');
+        return;
+      }
+      
       setUser(storedUser);
       
       const response = await api.get(`/memberships/${storedUser.memberId}`);
 
-      // 테스트용: 날짜가 없으면 임시 데이터 추가
-    const data = response.data;
-    if (!data.startDate) {
-      data.startDate = '2025-01-01';
-    }
-    if (!data.endDate) {
-      data.endDate = '2025-12-31';
-    }
-    
+      const data = response.data;
+      if (!data.startDate) {
+        data.startDate = '2025-01-01';
+      }
+      if (!data.endDate) {
+        data.endDate = '2025-12-31';
+      }
+      
       setMembership(response.data);
     } catch (error) {
       console.error('멤버십 조회 실패:', error);
@@ -68,13 +74,12 @@ const Membership = () => {
   const remainPT = membership?.remainPT || 0;
   const remainService = membership?.remainService || 0;
   const totalRemain = membership?.remain || 0;
-  const isPT = user?.role === 'PT'; // PT 회원 여부
-  const isOT = user?.role === 'OT'; // 일반 회원 여부
-  const hasPTHistory = (membership?.ptSessionsTotal || 0) > 0; // PT 이력 있는지
+  const isPT = user?.role === 'PT';
+  const isOT = user?.role === 'OT';
+  const hasPTHistory = (membership?.ptSessionsTotal || 0) > 0;
 
   return (
     <div className="min-h-screen bg-gray-50 pb-24">
-      {/* Header */}
       <div className="bg-white shadow-sm sticky top-0 z-10">
         <div className="max-w-lg mx-auto px-4 py-4 flex items-center">
           <button onClick={() => navigate('/home')} className="text-2xl mr-3">←</button>
@@ -82,9 +87,7 @@ const Membership = () => {
         </div>
       </div>
 
-      {/* Content */}
       <div className="max-w-lg mx-auto px-4 py-6 space-y-4">
-        {/* PT 회원만 표시: 멤버십 카드 */}
         {isPT && (
           <div className="bg-gradient-to-br from-primary to-blue-600 text-white rounded-2xl p-6 shadow-lg">
             <div className="flex justify-between items-start mb-6">
@@ -110,7 +113,6 @@ const Membership = () => {
           </div>
         )}
 
-        {/* 일반 회원만 표시: 간단한 상태 카드 */}
         {isOT && !hasPTHistory && (
           <>
             <div className="bg-gradient-to-br from-gray-400 to-gray-500 text-white rounded-2xl p-6 shadow-lg">
@@ -125,7 +127,6 @@ const Membership = () => {
                 <div className="text-5xl">🏃</div>
               </div>
 
-              {/* 이용 기간 정보 추가 */}
               {daysLeft !== null && (
                 <div className="bg-white bg-opacity-20 rounded-lg p-3">
                   <p className="text-xs opacity-90 mb-1">회원권 종료까지</p>
@@ -138,12 +139,10 @@ const Membership = () => {
           </>
         )}
 
-        {/* PT 회원만 표시: 세션 상세 정보 */}
         {isPT && (
           <div className="bg-white rounded-2xl shadow-md p-6 space-y-4">
             <h2 className="text-lg font-bold text-gray-800 mb-4">세션 상세</h2>
             
-            {/* 정규 PT */}
             <div className="flex justify-between items-center pb-4 border-b">
               <div>
                 <p className="text-sm text-gray-500 mb-1">정규 PT</p>
@@ -155,7 +154,6 @@ const Membership = () => {
               </div>
             </div>
 
-            {/* 서비스 세션 */}
             <div className="flex justify-between items-center">
               <div>
                 <p className="text-sm text-gray-500 mb-1">서비스 세션</p>
@@ -169,7 +167,6 @@ const Membership = () => {
           </div>
         )}
 
-        {/* PT 이력이 있는 OT 회원: 과거 PT 기록 */}
         {isOT && hasPTHistory && (
           <div className="bg-white rounded-2xl shadow-md p-6">
             <h2 className="text-lg font-bold text-gray-800 mb-4">
@@ -191,7 +188,6 @@ const Membership = () => {
           </div>
         )}
 
-        {/* 이용 기간 (모든 회원 표시 - OT 회원도 포함) */}
         {(membership?.startDate || membership?.endDate) && (
           <div className="bg-white rounded-2xl shadow-md p-6">
             <h2 className="text-lg font-bold text-gray-800 mb-4">회원권 기간</h2>
@@ -220,7 +216,6 @@ const Membership = () => {
           </div>
         )}
 
-        {/* PT 회원만 표시: 경고 메시지 */}
         {isPT && remainPT <= 4 && remainPT > 0 && (
           <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4">
             <div className="flex items-start">

@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import BottomNav from '../../components/BottomNav';
 import Card from '../../components/Card';
-import api from '../../services/api';
+import api, { getAuthData } from '../../services/api'; // ✅ getAuthData import 추가!
 
 const Home = () => {
   const navigate = useNavigate();
@@ -11,25 +11,27 @@ const Home = () => {
   const [alertCount, setAlertCount] = useState(0);
 
   useEffect(() => {
-    const userData = localStorage.getItem('user');
+    // ✅ getAuthData 사용
+    const { user: userData } = getAuthData();
+    
     if (!userData) {
       navigate('/login');
       return;
     }
-    const parsedUser = JSON.parse(userData);
-    setUser(parsedUser);
+    
+    setUser(userData); // ✅ JSON.parse 제거 (이미 객체임)
     fetchUnreadCount();
     
-    if (parsedUser.role === 'TRAINER') {
+    if (userData.role === 'TRAINER') {
       fetchAlertCount();
     }
   }, [navigate]);
 
   const fetchUnreadCount = async () => {
     try {
-      const userData = JSON.parse(localStorage.getItem('user'));
+      // ✅ getAuthData 사용
+      const { user: userData } = getAuthData();
 
-      // 사용자 정보가 없으면 API를 호출하지 않고 함수를 종료합니다.
       if (!userData || !userData.memberId) {
         navigate('/login');
         return;
@@ -43,15 +45,14 @@ const Home = () => {
   };
 
   const fetchAlertCount = async () => {
-  try {
-    // ✨ 수정할 부분: URL을 '/memberships/trainer/alerts'로 변경
-    const response = await api.get(`/memberships/trainer/alerts?threshold=4`);
-    setAlertCount(response.data.length);
-  } catch (error) {
-    console.error('알림 개수 조회 실패:', error);
-    setAlertCount(0);
-  }
-};
+    try {
+      const response = await api.get(`/memberships/trainer/alerts?threshold=4`);
+      setAlertCount(response.data.length);
+    } catch (error) {
+      console.error('알림 개수 조회 실패:', error);
+      setAlertCount(0);
+    }
+  };
 
   if (!user) return null;
 
@@ -92,7 +93,6 @@ const Home = () => {
         {/* 트레이너 전용 화면 */}
         {isTrainer ? (
           <>
-            {/* PT 세션 현황 카드 */}
             <Card onClick={() => navigate('/trainer/pt-sessions')} className="cursor-pointer hover:shadow-lg transition-shadow">
               <div className="flex items-center justify-between">
                 <div className="flex items-center">
@@ -108,7 +108,6 @@ const Home = () => {
               </div>
             </Card>
 
-            {/* 담당 회원 카드 */}
             <Card onClick={() => navigate('/trainer/members')} className="cursor-pointer hover:shadow-lg transition-shadow">
               <div className="flex items-center justify-between">
                 <div className="flex items-center">
@@ -124,7 +123,6 @@ const Home = () => {
               </div>
             </Card>
 
-            {/* 세션 알림 카드 */}
             <Card onClick={() => navigate('/trainer/membership-alerts')} className="cursor-pointer hover:shadow-lg transition-shadow">
               <div className="flex items-center justify-between">
                 <div className="flex items-center">
@@ -147,7 +145,6 @@ const Home = () => {
               </div>
             </Card>
 
-            {/* 트레이너 통계 카드 */}
             <Card onClick={() => navigate('/trainer/statistics')} className="cursor-pointer hover:shadow-lg transition-shadow">
               <div className="flex items-center justify-between">
                 <div className="flex items-center">
@@ -164,9 +161,7 @@ const Home = () => {
             </Card>
           </>
         ) : (
-          /* 일반 회원/PT 회원 전용 화면 */
           <>
-            {/* 운동 기록 카드 */}
             <Card onClick={() => navigate('/workout')} className="cursor-pointer hover:shadow-lg transition-shadow">
               <div className="flex items-center justify-between">
                 <div className="flex items-center">
@@ -182,7 +177,6 @@ const Home = () => {
               </div>
             </Card>
 
-            {/* 식단 기록 카드 */}
             <Card onClick={() => navigate('/diet')} className="cursor-pointer hover:shadow-lg transition-shadow">
               <div className="flex items-center justify-between">
                 <div className="flex items-center">
@@ -198,7 +192,6 @@ const Home = () => {
               </div>
             </Card>
 
-            {/* 나의 통계 카드 */}
             <Card onClick={() => navigate('/statistics')} className="cursor-pointer hover:shadow-lg transition-shadow">
               <div className="flex items-center justify-between">
                 <div className="flex items-center">
@@ -214,7 +207,6 @@ const Home = () => {
               </div>
             </Card>
 
-            {/* 멤버십 카드 */}
             <Card onClick={() => navigate('/membership')} className="cursor-pointer hover:shadow-lg transition-shadow">
               <div className="flex items-center justify-between">
                 <div className="flex items-center">

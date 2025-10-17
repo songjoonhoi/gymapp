@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import BottomNav from '../../components/BottomNav';
 import Button from '../../components/Button';
 import Input from '../../components/Input';
-import api from '../../services/api';
+import api, { getAuthData, clearAuthData } from '../../services/api'; // ✅ 추가
 
 const Profile = () => {
   const navigate = useNavigate();
@@ -21,9 +21,9 @@ const Profile = () => {
 
   const fetchUserInfo = async () => {
     try {
-      const storedUser = JSON.parse(localStorage.getItem('user'));
+      // ✅ getAuthData 사용
+      const { user: storedUser } = getAuthData();
 
-      // 사용자 정보가 없으면 로그인 페이지로 보내고 함수를 즉시 종료합니다.
       if (!storedUser) {
         navigate('/login');
         return;
@@ -69,8 +69,8 @@ const Profile = () => {
 
   const handleLogout = () => {
     if (window.confirm('로그아웃 하시겠습니까?')) {
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
+      // ✅ clearAuthData 사용
+      clearAuthData();
       navigate('/login');
     }
   };
@@ -174,7 +174,6 @@ const Profile = () => {
           </div>
         )}
         
-        {/* 비밀번호 변경 버튼 추가 */}
         <Button 
           fullWidth 
           variant="secondary"
@@ -184,7 +183,6 @@ const Profile = () => {
           비밀번호 변경
         </Button>
 
-        {/* 로그아웃 버튼 */}
         <Button variant="danger" fullWidth onClick={handleLogout}>
           로그아웃
         </Button>

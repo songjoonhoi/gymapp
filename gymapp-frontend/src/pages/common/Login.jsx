@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import Button from '../../components/Button';
 import Input from '../../components/Input';
-import api, { saveAuthData } from '../../services/api';  // ✅ saveAuthData import 추가
+import api, { saveAuthData } from '../../services/api';
 
 const Login = () => {
   const navigate = useNavigate();
@@ -25,23 +25,48 @@ const Login = () => {
     setError('');
     setLoading(true);
 
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    console.log('🔐 로그인 시도');
+    console.log('이메일:', formData.email);
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+
     try {
       const response = await api.post('/auth/login', formData);
+      
+      console.log('=== 로그인 응답 ===');
+      console.log('response.data:', response.data);
+      
       const { accessToken, memberId, role } = response.data;
       
-      // ✅ 새로운 저장 방식 사용
-      const user = { id: memberId, memberId, role };
+      console.log('accessToken:', accessToken.substring(0, 20) + '...');
+      console.log('memberId:', memberId);
+      console.log('role:', role);
+      
+      // ✅ user 객체 생성
+      const user = { 
+        id: memberId,
+        memberId: memberId,
+        role: role 
+      };
+      
       saveAuthData(accessToken, user);
+      
+      console.log('=== 저장 후 확인 ===');
+      console.log('sessionStorage activeUserId:', sessionStorage.getItem('activeUserId'));
+      console.log('localStorage activeUserId:', localStorage.getItem('activeUserId'));
+      console.log('localStorage token_' + memberId + ':', localStorage.getItem(`token_${memberId}`) ? '✅ 있음' : '❌ 없음');
+      console.log('localStorage user_' + memberId + ':', localStorage.getItem(`user_${memberId}`) ? '✅ 있음' : '❌ 없음');
 
-      // ✨ 역할에 따라 다른 페이지로 이동시키는 로직
+      // 역할에 따라 다른 페이지로 이동
       if (role === 'ADMIN') {
         navigate('/admin/dashboard');
       } else if (role === 'TRAINER') {
-        navigate('/trainer/members'); // 트레이너는 회원 목록으로 이동
+        navigate('/trainer/members');
       } else {
         navigate('/home');
       }
     } catch (err) {
+      console.error('❌ 로그인 실패:', err);
       setError(err.response?.data?.message || '로그인에 실패했습니다.');
     } finally {
       setLoading(false);

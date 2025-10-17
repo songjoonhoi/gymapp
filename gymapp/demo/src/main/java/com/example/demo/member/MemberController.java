@@ -44,6 +44,12 @@ public class MemberController {
         return service.listWithPermission(PageRequest.of(page, size), user);
     }
 
+    // ✨ 트레이너 목록 조회 API 추가
+    @GetMapping("/trainers")
+    public List<MemberResponse> getTrainers() {
+        return service.getTrainerList();
+    }
+
     // ✅ 회원 정보 수정
     @PutMapping("/{id}")
     public MemberResponse update(@PathVariable Long id,
@@ -113,7 +119,4 @@ public class MemberController {
             throw new RuntimeException("Excel 파일 업로드 및 처리 중 오류 발생: " + e.getMessage());
         }
     }
-
-    
 }
-

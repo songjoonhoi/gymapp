@@ -1,5 +1,6 @@
 package com.example.demo.member;
 
+import com.example.demo.common.enums.Role;
 import com.example.demo.common.enums.UserStatus;
 import com.example.demo.common.enums.AccountStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -34,6 +35,9 @@ public interface MemberRepository extends JpaRepository<Member, Long> {
     // ✅ 트레이너 관련
     List<Member> findByTrainerId(Long trainerId);
     List<Member> findByTrainerIdAndAccountStatus(Long trainerId, AccountStatus status);
+    
+    // ✨ 역할별 조회 추가
+    List<Member> findByRole(Role role);
     
     // ✅ 하드 삭제용 메서드 (Soft Delete 우회)
     @Modifying
