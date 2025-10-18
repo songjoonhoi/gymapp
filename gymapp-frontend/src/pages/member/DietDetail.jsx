@@ -23,6 +23,7 @@ const DietDetail = () => {
     const navigate = useNavigate();
     const { id } = useParams();
     const [log, setLog] = useState(null);
+    const [member, setMember] = useState(null);  // ✨ 추가: 회원 정보
     const [loading, setLoading] = useState(true);
     
     const [comments, setComments] = useState([]);
@@ -36,8 +37,18 @@ const DietDetail = () => {
 
     const fetchLogDetail = async () => {
         try {
+            // 1. 식단일지 조회
             const response = await api.get(`/diet-logs/detail/${id}`);
             setLog(response.data);
+
+            // 2. ✨ 회원 정보 조회 (trainerId 확인용)
+            try {
+                const memberResponse = await api.get(`/members/${response.data.memberId}`);
+                setMember(memberResponse.data);
+            } catch (memberError) {
+                console.error('회원 정보 조회 실패:', memberError);
+                // 회원 정보를 못 가져와도 식단일지는 표시
+            }
         } catch (error) {
             console.error('식단 기록 조회 실패:', error);
             alert('기록을 불러올 수 없습니다.');
@@ -99,6 +110,24 @@ const DietDetail = () => {
     const formatDate = (dateString) => {
         const date = new Date(dateString);
         return date.toLocaleString('ko-KR');
+    };
+
+    // ✨ 댓글 삭제 권한 체크 함수 (수정!)
+    const canDeleteComment = (comment) => {
+        if (!currentUser) return false;
+
+        // 1. 관리자는 모든 댓글 삭제 가능
+        if (currentUser.isAdmin) return true;
+
+        // 2. 댓글 작성자 본인
+        if (currentUser.memberId === comment.memberId) return true;
+
+        // 3. 담당 트레이너 (member.trainerId와 현재 사용자 비교)
+        if (currentUser.isTrainer && member?.trainerId === currentUser.memberId) {
+            return true;
+        }
+
+        return false;
     };
 
     if (loading) {
@@ -176,20 +205,16 @@ const DietDetail = () => {
                     {/* 댓글 목록 */}
                     <div className="space-y-4">
                         {comments.length > 0 ? comments.map(comment => {
-                            // ✅ 수정된 권한 체크: 본인 + 관리자 + 모든 트레이너
-                            const canDeleteComment = currentUser && (
-                                currentUser.memberId === comment.memberId ||  // 본인 댓글
-                                currentUser.isAdmin ||                         // 관리자
-                                currentUser.isTrainer                          // 모든 트레이너
-                            );
+                            const canDelete = canDeleteComment(comment);
 
                             console.log('🔍 댓글 삭제 권한:', {
                                 commentId: comment.id,
-                                currentUser: currentUser?.memberId,
-                                commentAuthor: comment.memberId,
+                                currentUserId: currentUser?.memberId,
+                                commentAuthorId: comment.memberId,
                                 isAdmin: currentUser?.isAdmin,
                                 isTrainer: currentUser?.isTrainer,
-                                canDelete: canDeleteComment
+                                memberTrainerId: member?.trainerId,
+                                canDelete: canDelete
                             });
 
                             return (
@@ -200,7 +225,7 @@ const DietDetail = () => {
                                     <div className="flex-1 bg-white p-3 rounded-lg shadow-sm">
                                         <div className="flex justify-between items-center">
                                             <p className="font-semibold text-gray-800">{comment.memberName}</p>
-                                            {canDeleteComment && (
+                                            {canDelete && (
                                                 <button 
                                                     onClick={() => handleCommentDelete(comment.id)} 
                                                     className="text-xs text-red-500 hover:text-red-700"

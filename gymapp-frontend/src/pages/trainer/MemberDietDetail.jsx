@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import Button from '../../components/Button';
-import api from '../../services/api';
+import api, { getAuthData } from '../../services/api';  // ✨ getAuthData 추가
 
 const MemberDietDetail = () => {
   const navigate = useNavigate();
@@ -11,7 +11,19 @@ const MemberDietDetail = () => {
   const [comments, setComments] = useState([]);
   const [newComment, setNewComment] = useState('');
   const [loading, setLoading] = useState(true);
-  const currentUser = JSON.parse(localStorage.getItem('user'));
+  
+  // ✨ 수정: getAuthData() 사용
+  const getCurrentUser = () => {
+    try {
+      const { user } = getAuthData();
+      return user || null;
+    } catch (error) {
+      console.error('사용자 정보 조회 실패:', error);
+      return null;
+    }
+  };
+
+  const currentUser = getCurrentUser();
 
   useEffect(() => {
     fetchData();
@@ -19,25 +31,25 @@ const MemberDietDetail = () => {
   }, [dietId]);
 
   const fetchData = async () => {
-  try {
-    // 회원 정보
-    const memberResponse = await api.get(`/members/${memberId}`);
-    setMember(memberResponse.data);
+    try {
+      // 1. 회원 정보
+      const memberResponse = await api.get(`/members/${memberId}`);
+      setMember(memberResponse.data);
 
-    // ✨ 식단 기록 (수정!)
-    const response = await api.get(`/diet-logs/detail/${dietId}`);
-    setLog(response.data);
+      // 2. 식단 기록
+      const response = await api.get(`/diet-logs/detail/${dietId}`);
+      setLog(response.data);
 
-    // 댓글 목록
-    await fetchComments();
-  } catch (error) {
-    console.error('식단 기록 조회 실패:', error);
-    alert('기록을 불러올 수 없습니다.');
-    navigate(`/trainer/members/${memberId}/diet`);
-  } finally {
-    setLoading(false);
-  }
-};
+      // 3. 댓글 목록
+      await fetchComments();
+    } catch (error) {
+      console.error('식단 기록 조회 실패:', error);
+      alert('기록을 불러올 수 없습니다.');
+      navigate(`/trainer/members/${memberId}/diet`);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const fetchComments = async () => {
     try {
@@ -58,7 +70,7 @@ const MemberDietDetail = () => {
     try {
       await api.post(`/diet-logs/${dietId}/comments`, { content: newComment });
       setNewComment('');
-      fetchComments(); // 댓글 목록 새로고침
+      fetchComments();
     } catch (error) {
       console.error('댓글 작성 실패:', error);
       alert(error.response?.data?.message || '코멘트 작성에 실패했습니다.');
@@ -69,7 +81,7 @@ const MemberDietDetail = () => {
     if (window.confirm('정말로 이 코멘트를 삭제하시겠습니까?')) {
       try {
         await api.delete(`/diet-logs/${dietId}/comments/${commentId}`);
-        fetchComments(); // 댓글 목록 새로고침
+        fetchComments();
       } catch (error) {
         console.error('댓글 삭제 실패:', error);
         alert(error.response?.data?.message || '코멘트 삭제에 실패했습니다.');
@@ -80,6 +92,35 @@ const MemberDietDetail = () => {
   const formatDate = (dateString) => {
     const date = new Date(dateString);
     return date.toLocaleString('ko-KR');
+  };
+
+  // ✨ 댓글 삭제 권한 체크 함수
+  const canDeleteComment = (comment) => {
+    if (!currentUser) {
+      console.log('❌ currentUser가 없음');
+      return false;
+    }
+
+    // 1. 관리자는 모든 댓글 삭제 가능
+    if (currentUser.role === 'ADMIN') {
+      console.log('✅ 관리자 권한');
+      return true;
+    }
+
+    // 2. 댓글 작성자 본인
+    if (currentUser.memberId === comment.memberId) {
+      console.log('✅ 댓글 작성자 본인');
+      return true;
+    }
+
+    // 3. 담당 트레이너 (member.trainerId와 현재 사용자 비교)
+    if (currentUser.role === 'TRAINER' && member?.trainerId === currentUser.memberId) {
+      console.log('✅ 담당 트레이너');
+      return true;
+    }
+
+    console.log('❌ 권한 없음');
+    return false;
   };
 
   if (loading) {
@@ -102,15 +143,14 @@ const MemberDietDetail = () => {
     <div className="min-h-screen bg-gray-50 pb-20">
       {/* Header */}
       <div className="max-w-lg mx-auto px-4 py-4 flex justify-between items-center">
-            <button onClick={() => navigate(`/trainer/members/${memberId}/diet`)} className="text-2xl">←</button>
-            {/* ✨ 수정 버튼 추가 */}
-            <button
-                onClick={() => navigate(`/trainer/members/${memberId}/diet/edit/${dietId}`)}
-                className="text-primary font-semibold"
-            >
-                수정
-            </button>
-            </div>
+        <button onClick={() => navigate(`/trainer/members/${memberId}/diet`)} className="text-2xl">←</button>
+        <button
+            onClick={() => navigate(`/trainer/members/${memberId}/diet/edit/${dietId}`)}
+            className="text-primary font-semibold"
+        >
+            수정
+        </button>
+      </div>
 
       {/* Content */}
       <div className="max-w-lg mx-auto">
@@ -167,12 +207,16 @@ const MemberDietDetail = () => {
           <div className="space-y-4">
             {comments.length > 0 ? (
               comments.map(comment => {
-                // 댓글 삭제 권한: 본인 또는 관리자
-                const canDelete = currentUser && (
-                  currentUser.memberId === comment.memberId ||
-                  currentUser.role === 'ADMIN' ||
-                  currentUser.role === 'TRAINER'
-                );
+                const canDelete = canDeleteComment(comment);
+
+                console.log('🔍 댓글 삭제 권한:', {
+                  commentId: comment.id,
+                  currentUserId: currentUser?.memberId,
+                  commentAuthorId: comment.memberId,
+                  role: currentUser?.role,
+                  memberTrainerId: member?.trainerId,
+                  canDelete: canDelete
+                });
 
                 return (
                   <div key={comment.id} className="flex items-start space-x-3">
