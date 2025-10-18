@@ -1,14 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import Button from '../../components/Button';
-import api from '../../services/api';
+import api, { getAuthData } from '../../services/api';
 import BottomNav from '../../components/BottomNav';
 
 // ✨ 현재 로그인한 사용자 정보를 가져오는 헬퍼 함수
 const getCurrentUser = () => {
     try {
-        const user = JSON.parse(localStorage.getItem('user'));
+        const { user } = getAuthData();
         if (!user) return null;
+        
         // 백엔드 UserPrincipal과 유사한 권한 정보를 추가
         user.isAdmin = user.role === 'ADMIN';
         user.isTrainer = user.role === 'TRAINER';
@@ -20,21 +21,19 @@ const getCurrentUser = () => {
 
 const DietDetail = () => {
     const navigate = useNavigate();
-    const { id } = useParams(); // URL 파라미터 `id`
+    const { id } = useParams();
     const [log, setLog] = useState(null);
     const [loading, setLoading] = useState(true);
     
-    // ✨ 댓글 관련 상태 추가
     const [comments, setComments] = useState([]);
     const [newComment, setNewComment] = useState('');
     const currentUser = getCurrentUser();
 
     useEffect(() => {
         fetchLogDetail();
-        fetchComments(); // ✨ 상세 정보와 함께 댓글도 불러오기
+        fetchComments();
     }, [id]);
 
-    // ✨ [수정] 식단일지 상세 정보를 올바른 API로 조회
     const fetchLogDetail = async () => {
         try {
             const response = await api.get(`/diet-logs/detail/${id}`);
@@ -48,7 +47,6 @@ const DietDetail = () => {
         }
     };
 
-    // ✨ 댓글 목록을 불러오는 함수
     const fetchComments = async () => {
         try {
             const response = await api.get(`/diet-logs/${id}/comments`);
@@ -58,7 +56,6 @@ const DietDetail = () => {
         }
     };
     
-    // ✨ 댓글 작성 핸들러
     const handleCommentSubmit = async (e) => {
         e.preventDefault();
         if (!newComment.trim()) {
@@ -68,19 +65,18 @@ const DietDetail = () => {
         try {
             await api.post(`/diet-logs/${id}/comments`, { content: newComment });
             setNewComment('');
-            fetchComments(); // 댓글 목록 새로고침
+            fetchComments();
         } catch (error) {
             console.error("댓글 작성 실패:", error);
             alert(error.response?.data?.message || "댓글 작성에 실패했습니다.");
         }
     };
 
-    // ✨ 댓글 삭제 핸들러
     const handleCommentDelete = async (commentId) => {
         if (window.confirm("정말로 이 댓글을 삭제하시겠습니까?")) {
             try {
                 await api.delete(`/diet-logs/${id}/comments/${commentId}`);
-                fetchComments(); // 댓글 목록 새로고침
+                fetchComments();
             } catch (error) {
                 console.error("댓글 삭제 실패:", error);
                 alert(error.response?.data?.message || "댓글 삭제에 실패했습니다.");
@@ -113,7 +109,7 @@ const DietDetail = () => {
         return <div className="p-4 text-center">기록을 찾을 수 없습니다.</div>;
     }
 
-    // ✨ 본인 또는 관리자만 수정/삭제 가능
+    // 본인 또는 관리자만 수정/삭제 가능
     const canModifyLog = currentUser && (currentUser.memberId === log.memberId || currentUser.isAdmin);
 
     return (
@@ -151,7 +147,14 @@ const DietDetail = () => {
 
                     {log.calories && (
                        <div className="bg-green-50 rounded-2xl p-6 border border-green-200">
-                           {/* ... 칼로리 및 영양 정보 UI (기존과 동일) ... */}
+                           <div className="flex items-center mb-3">
+                               <span className="text-2xl mr-2">🥗</span>
+                               <h3 className="text-lg font-bold text-green-900">영양 정보</h3>
+                           </div>
+                           <div className="mb-3">
+                               <p className="text-sm text-green-700 mb-1">칼로리</p>
+                               <p className="text-2xl font-bold text-green-900">{log.calories} kcal</p>
+                           </div>
                        </div>
                     )}
                     
@@ -166,19 +169,29 @@ const DietDetail = () => {
                     )}
                 </div>
 
-                {/* ✨ ================== 댓글 섹션 ================== ✨ */}
+                {/* ✨ 댓글 섹션 */}
                 <div className="px-6 pb-6">
                     <h2 className="text-xl font-bold text-gray-800 mb-4 border-t pt-6">댓글 ({comments.length})</h2>
 
                     {/* 댓글 목록 */}
                     <div className="space-y-4">
                         {comments.length > 0 ? comments.map(comment => {
-                            // ✨ 댓글 삭제 권한 체크
+                            // ✅ 수정된 권한 체크: 본인 + 관리자 + 모든 트레이너
                             const canDeleteComment = currentUser && (
-                                currentUser.memberId === comment.memberId ||
-                                currentUser.isAdmin ||
-                                (currentUser.isTrainer && log.trainerId === currentUser.memberId)
+                                currentUser.memberId === comment.memberId ||  // 본인 댓글
+                                currentUser.isAdmin ||                         // 관리자
+                                currentUser.isTrainer                          // 모든 트레이너
                             );
+
+                            console.log('🔍 댓글 삭제 권한:', {
+                                commentId: comment.id,
+                                currentUser: currentUser?.memberId,
+                                commentAuthor: comment.memberId,
+                                isAdmin: currentUser?.isAdmin,
+                                isTrainer: currentUser?.isTrainer,
+                                canDelete: canDeleteComment
+                            });
+
                             return (
                                 <div key={comment.id} className="flex items-start space-x-3">
                                     <div className="flex-shrink-0 w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center font-bold text-gray-500">
@@ -188,7 +201,12 @@ const DietDetail = () => {
                                         <div className="flex justify-between items-center">
                                             <p className="font-semibold text-gray-800">{comment.memberName}</p>
                                             {canDeleteComment && (
-                                                <button onClick={() => handleCommentDelete(comment.id)} className="text-xs text-red-500 hover:text-red-700">삭제</button>
+                                                <button 
+                                                    onClick={() => handleCommentDelete(comment.id)} 
+                                                    className="text-xs text-red-500 hover:text-red-700"
+                                                >
+                                                    삭제
+                                                </button>
                                             )}
                                         </div>
                                         <p className="text-xs text-gray-500 mb-2">{formatDate(comment.createdAt)}</p>
@@ -212,7 +230,9 @@ const DietDetail = () => {
                             disabled={!currentUser}
                         />
                         <div className="text-right mt-2">
-                            <Button type="submit" disabled={!currentUser || !newComment.trim()}>댓글 작성</Button>
+                            <Button type="submit" disabled={!currentUser || !newComment.trim()}>
+                                댓글 작성
+                            </Button>
                         </div>
                     </form>
                 </div>

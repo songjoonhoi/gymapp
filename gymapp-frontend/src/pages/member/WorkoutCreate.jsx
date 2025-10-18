@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Button from '../../components/Button';
 import Input from '../../components/Input';
-import api from '../../services/api';
+import api, { getAuthData, saveAuthData } from '../../services/api'; // ✅ 추가
 import BottomNav from '../../components/BottomNav';
 
 const WorkoutCreate = () => {
@@ -16,39 +16,55 @@ const WorkoutCreate = () => {
   const [loading, setLoading] = useState(false);
   const [authLoading, setAuthLoading] = useState(true);
 
-  //페이지 로드 시 PT 회원인지 확인
-   useEffect(() => {
-        const checkAuth = async () => {
-            try {
-                const storedUser = JSON.parse(localStorage.getItem('user'));
-                if (!storedUser) {
-                    navigate('/login');
-                    return;
-                }
-                // 서버에 최신 회원 정보 요청
-                const response = await api.get(`/members/${storedUser.memberId}`);
-                const latestUser = response.data;
+  // ✅ 페이지 로드 시 PT 회원인지 확인
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        // ✅ getAuthData 사용
+        const { user: storedUser } = getAuthData();
+        
+        if (!storedUser) {
+          navigate('/login');
+          return;
+        }
 
-                // 최신 role로 브라우저 저장소 정보 업데이트
-                const updatedUser = { ...storedUser, role: latestUser.role };
-                localStorage.setItem('user', JSON.stringify(updatedUser));
+        // 서버에서 최신 회원 정보 조회
+        const response = await api.get(`/members/${storedUser.memberId}`);
+        const latestUser = response.data;
 
-                // 최신 role로 접근 권한 확인
-                if (latestUser.role !== 'PT') {
-                    alert('PT 회원 전용 기능입니다. PT 등록 후 이용해주세요.');
-                    navigate(-1); // 이전 페이지로 돌아가기
-                }
-            } catch (error) {
-                console.error("권한 확인 실패:", error);
-                alert("사용자 정보를 확인하는 중 오류가 발생했습니다.");
-                navigate('/home');
-            } finally {
-                setAuthLoading(false); // 권한 확인 완료
-            }
+        console.log('✅ 최신 회원 정보:', latestUser);
+        console.log('역할:', latestUser.role);
+
+        // ✅ 최신 정보로 로컬스토리지 업데이트
+        const updatedUser = { 
+          ...storedUser, 
+          role: latestUser.role 
         };
+        
+        // ✅ saveAuthData로 업데이트 (기존 토큰 유지)
+        const { token } = getAuthData();
+        saveAuthData(token, updatedUser);
 
-        checkAuth();
-    }, [navigate]);
+        // PT 권한 확인
+        if (latestUser.role !== 'PT') {
+          alert('PT 회원 전용 기능입니다. PT 등록 후 이용해주세요.');
+          navigate(-1);
+          return;
+        }
+
+        console.log('✅ PT 권한 확인 완료');
+        
+      } catch (error) {
+        console.error('❌ 권한 확인 실패:', error);
+        alert('사용자 정보를 확인하는 중 오류가 발생했습니다.');
+        navigate('/home');
+      } finally {
+        setAuthLoading(false);
+      }
+    };
+
+    checkAuth();
+  }, [navigate]);
 
   const handleChange = (e) => {
     setFormData({
@@ -74,7 +90,7 @@ const WorkoutCreate = () => {
     setLoading(true);
 
     try {
-      const user = JSON.parse(localStorage.getItem('user'));
+      const { user } = getAuthData();
       const formDataToSend = new FormData();
       formDataToSend.append('title', formData.title);
       formDataToSend.append('content', formData.content);
@@ -98,10 +114,10 @@ const WorkoutCreate = () => {
     }
   };
 
-  // ✨ 권한 확인이 끝나기 전에는 로딩 화면 표시
-    if (authLoading) {
-        return <div className="text-center py-20">권한을 확인하는 중...</div>;
-    }
+  // ✅ 권한 확인이 끝나기 전에는 로딩 화면 표시
+  if (authLoading) {
+    return <div className="text-center py-20">권한을 확인하는 중...</div>;
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 pb-24">

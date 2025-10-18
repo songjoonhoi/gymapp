@@ -1,11 +1,17 @@
 import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { getAuthData } from '../services/api'; // ✅ 추가
 
 const BottomNav = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const user = JSON.parse(localStorage.getItem('user') || '{}');
+  
+  // ✅ getAuthData() 사용
+  const { user } = getAuthData();
   const isTrainer = user?.role === 'TRAINER';
+
+  console.log('🔍 BottomNav - 사용자 정보:', user);
+  console.log('🔍 BottomNav - isTrainer:', isTrainer);
 
   // 트레이너용 네비게이션
   const trainerNavItems = [

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Button from '../../components/Button';
 import Input from '../../components/Input';
-import api from '../../services/api';
+import api, { getAuthData, saveAuthData } from '../../services/api';
 import BottomNav from '../../components/BottomNav';
 
 const DietCreate = () => {
@@ -14,39 +14,45 @@ const DietCreate = () => {
   const [media, setMedia] = useState(null);
   const [preview, setPreview] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [aiResult, setAiResult] = useState(null); // AI 분석 결과 추가
+  const [aiResult, setAiResult] = useState(null);
   const [authLoading, setAuthLoading] = useState(true);
 
-  // ✨ [수정] 페이지 진입 시 서버에 직접 PT 회원인지 확인
-    useEffect(() => {
-        const checkAuth = async () => {
-            try {
-                const storedUser = JSON.parse(localStorage.getItem('user'));
-                if (!storedUser) {
-                    navigate('/login');
-                    return;
-                }
-                const response = await api.get(`/members/${storedUser.memberId}`);
-                const latestUser = response.data;
+  // ✅ 페이지 진입 시 서버에 직접 PT 회원인지 확인
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        const { user: storedUser } = getAuthData();
+        
+        if (!storedUser) {
+          navigate('/login');
+          return;
+        }
 
-                const updatedUser = { ...storedUser, role: latestUser.role };
-                localStorage.setItem('user', JSON.stringify(updatedUser));
-                
-                if (latestUser.role !== 'PT') {
-                    alert('PT 회원 전용 기능입니다. PT 등록 후 이용해주세요.');
-                    navigate(-1);
-                }
-            } catch (error) {
-                console.error("권한 확인 실패:", error);
-                alert("사용자 정보를 확인하는 중 오류가 발생했습니다.");
-                navigate('/home');
-            } finally {
-                setAuthLoading(false);
-            }
-        };
+        const response = await api.get(`/members/${storedUser.memberId}`);
+        const latestUser = response.data;
 
-        checkAuth();
-    }, [navigate]);
+        console.log('✅ 최신 회원 정보:', latestUser);
+
+        // ✅ 최신 정보로 업데이트
+        const updatedUser = { ...storedUser, role: latestUser.role };
+        const { token } = getAuthData();
+        saveAuthData(token, updatedUser);
+        
+        if (latestUser.role !== 'PT') {
+          alert('PT 회원 전용 기능입니다. PT 등록 후 이용해주세요.');
+          navigate(-1);
+        }
+      } catch (error) {
+        console.error("권한 확인 실패:", error);
+        alert("사용자 정보를 확인하는 중 오류가 발생했습니다.");
+        navigate('/home');
+      } finally {
+        setAuthLoading(false);
+      }
+    };
+
+    checkAuth();
+  }, [navigate]);
 
   const handleChange = (e) => {
     setFormData({
@@ -72,7 +78,9 @@ const DietCreate = () => {
     setLoading(true);
 
     try {
-      const user = JSON.parse(localStorage.getItem('user'));
+      // ✅ getAuthData() 사용
+      const { user } = getAuthData();
+      
       const formDataToSend = new FormData();
       formDataToSend.append('title', formData.title);
       formDataToSend.append('content', formData.content);
@@ -104,10 +112,9 @@ const DietCreate = () => {
     }
   };
 
-  // ✨ 권한 확인이 끝나기 전에는 로딩 화면 표시
-    if (authLoading) {
-        return <div className="text-center py-20">권한을 확인하는 중...</div>;
-    }
+  if (authLoading) {
+    return <div className="text-center py-20">권한을 확인하는 중...</div>;
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 pb-24">

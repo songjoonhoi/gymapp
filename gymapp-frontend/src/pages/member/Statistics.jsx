@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import BottomNav from '../../components/BottomNav';
-import api from '../../services/api';
+import api, { getAuthData } from '../../services/api'; // ✅ 추가
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts';
 
 const Statistics = () => {
+  const navigate = useNavigate();
   const [workoutCount, setWorkoutCount] = useState(0);
   const [totalCalories, setTotalCalories] = useState(0);
   const [weeklyWorkouts, setWeeklyWorkouts] = useState([]);
@@ -17,7 +19,15 @@ const Statistics = () => {
 
   const fetchStatistics = async () => {
     try {
-      const user = JSON.parse(localStorage.getItem('user'));
+      // ✅ getAuthData() 사용
+      const { user } = getAuthData();
+      
+      // ✅ user null 체크
+      if (!user || !user.memberId) {
+        console.error('로그인 정보가 없습니다');
+        navigate('/login');
+        return;
+      }
       
       const workoutResponse = await api.get(`/workout-logs/member/${user.memberId}`);
       const workouts = workoutResponse.data;
