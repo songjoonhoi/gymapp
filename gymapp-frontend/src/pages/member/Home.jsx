@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import BottomNav from '../../components/BottomNav';
 import Card from '../../components/Card';
-import api, { getAuthData } from '../../services/api'; // ✅ getAuthData import 추가!
+import api, { getAuthData } from '../../services/api';
 
 const Home = () => {
   const navigate = useNavigate();
@@ -11,7 +11,6 @@ const Home = () => {
   const [alertCount, setAlertCount] = useState(0);
 
   useEffect(() => {
-    // ✅ getAuthData 사용
     const { user: userData } = getAuthData();
     
     if (!userData) {
@@ -19,7 +18,7 @@ const Home = () => {
       return;
     }
     
-    setUser(userData); // ✅ JSON.parse 제거 (이미 객체임)
+    setUser(userData);
     fetchUnreadCount();
     
     if (userData.role === 'TRAINER') {
@@ -29,7 +28,6 @@ const Home = () => {
 
   const fetchUnreadCount = async () => {
     try {
-      // ✅ getAuthData 사용
       const { user: userData } = getAuthData();
 
       if (!userData || !userData.memberId) {
@@ -57,6 +55,7 @@ const Home = () => {
   if (!user) return null;
 
   const isTrainer = user?.role === 'TRAINER';
+  const isPT = user?.role === 'PT'; // ✨ PT 회원 여부 추가
 
   return (
     <div className="min-h-screen bg-gray-50 pb-24">
@@ -192,6 +191,24 @@ const Home = () => {
               </div>
             </Card>
 
+            {/* ✨ PT 회원 전용: PT 운동 기록 */}
+            {isPT && (
+              <Card onClick={() => navigate('/my-pt-sessions')} className="cursor-pointer hover:shadow-lg transition-shadow">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center">
+                    <div className="w-12 h-12 bg-indigo-100 rounded-xl flex items-center justify-center text-2xl mr-4">
+                      💪
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-bold text-gray-800">PT 운동 기록</h3>
+                      <p className="text-sm text-gray-500">트레이너와 함께한 PT 세션</p>
+                    </div>
+                  </div>
+                  <span className="text-gray-400">→</span>
+                </div>
+              </Card>
+            )}
+
             <Card onClick={() => navigate('/statistics')} className="cursor-pointer hover:shadow-lg transition-shadow">
               <div className="flex items-center justify-between">
                 <div className="flex items-center">
@@ -207,20 +224,23 @@ const Home = () => {
               </div>
             </Card>
 
-            <Card onClick={() => navigate('/membership')} className="cursor-pointer hover:shadow-lg transition-shadow">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center">
-                  <div className="w-12 h-12 bg-yellow-100 rounded-xl flex items-center justify-center text-2xl mr-4">
-                    💳
+            {/* ✨ PT 회원만 멤버십 카드 표시 */}
+            {isPT && (
+              <Card onClick={() => navigate('/membership')} className="cursor-pointer hover:shadow-lg transition-shadow">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center">
+                    <div className="w-12 h-12 bg-yellow-100 rounded-xl flex items-center justify-center text-2xl mr-4">
+                      💳
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-bold text-gray-800">멤버십</h3>
+                      <p className="text-sm text-gray-500">PT 회원</p>
+                    </div>
                   </div>
-                  <div>
-                    <h3 className="text-lg font-bold text-gray-800">멤버십</h3>
-                    <p className="text-sm text-gray-500">PT 회원</p>
-                  </div>
+                  <span className="text-gray-400">→</span>
                 </div>
-                <span className="text-gray-400">→</span>
-              </div>
-            </Card>
+              </Card>
+            )}
           </>
         )}
       </div>

@@ -31,6 +31,7 @@ import Statistics from './pages/member/Statistics';
 import Notifications from './pages/member/Notifications';
 import Membership from './pages/member/Membership';
 import MyPtSessions from './pages/member/MyPtSessions';
+import MyPtSessionDetail from './pages/member/MyPtSessionDetail';
 
 
 
@@ -93,6 +94,7 @@ function App() {
           <Route path="/notifications" element={<Notifications />} />
           <Route path="/membership" element={<Membership />} />
           <Route path="/my-pt-sessions" element={<MyPtSessions />} />
+          <Route path="/my-pt-sessions/:sessionId" element={<MyPtSessionDetail />} />
           
           
           {/* Trainer Routes */}

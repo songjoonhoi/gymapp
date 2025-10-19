@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import Button from '../../components/Button';
 import Input from '../../components/Input';
-import DateInput from '../../components/DateInput'; // ✅ 추가
+import DateInput from '../../components/DateInput';
 import api from '../../services/api';
 
 const Register = () => {
@@ -14,20 +14,23 @@ const Register = () => {
     password: '',
     confirmPassword: '',
     gender: 'MALE',
-    dateOfBirth: '', // ✅ age → dateOfBirth
+    dateOfBirth: '',
   });
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
-  const [emailAuto, setEmailAuto] = useState(true); // ✅ 이메일 자동 생성 여부
+  const [emailAuto, setEmailAuto] = useState(true);
 
   // ✅ 전화번호 입력 시 이메일 자동 생성
   useEffect(() => {
     if (emailAuto && formData.phone) {
       const cleaned = formData.phone.replace(/\D/g, '');
+      
       if (cleaned.length >= 10) {
+        const newEmail = `${cleaned}@gymapp.com`;
+        
         setFormData(prev => ({
           ...prev,
-          email: `${cleaned}@gymapp.com`
+          email: newEmail
         }));
       }
     }
@@ -36,14 +39,18 @@ const Register = () => {
   const handleChange = (e) => {
     const { name, value } = e.target;
     
-    setFormData({
-      ...formData,
+    setFormData(prev => ({
+      ...prev,
       [name]: value,
-    });
+    }));
 
-    // ✅ 이메일을 직접 수정하면 자동 생성 해제
+    // ✅ 이메일 필드에 실제로 값을 입력했을 때만 자동생성 OFF
     if (name === 'email') {
-      setEmailAuto(false);
+      if (value.trim() !== '') {
+        setEmailAuto(false);
+      } else {
+        setEmailAuto(true);
+      }
     }
   };
 
@@ -164,7 +171,6 @@ const Register = () => {
               </div>
             </div>
 
-            {/* ✅ DateInput 컴포넌트 사용 */}
             <DateInput
               label="생년월일"
               name="dateOfBirth"
@@ -174,7 +180,6 @@ const Register = () => {
               required
             />
 
-            {/* ✅ 전화번호 자동 포맷팅 */}
             <Input
               label="전화번호"
               name="phone"
@@ -182,27 +187,26 @@ const Register = () => {
               onChange={handleChange}
               error={errors.phone}
               placeholder="010-1234-5678"
-              autoFormat={true} // ✅ 자동 포맷 활성화
+              autoFormat={true}
               required
             />
 
-            {/* ✅ 이메일 자동 생성 + 수동 입력 가능 */}
-            <div className="mb-4">
-              <Input
-                label="이메일 (선택사항)"
-                type="email"
-                name="email"
-                value={formData.email}
-                onChange={handleChange}
-                error={errors.email}
-                placeholder="입력하지 않으면 자동 생성됩니다"
-              />
-              {emailAuto && formData.phone && (
-                <p className="text-xs text-blue-600 mt-1">
-                  💡 자동 생성: {formData.phone.replace(/\D/g, '')}@gymapp.com
-                </p>
-              )}
-            </div>
+            <Input
+              label="이메일 (선택사항)"
+              type="email"
+              name="email"
+              value={formData.email}
+              onChange={handleChange}
+              error={errors.email}
+              placeholder="입력하지 않으면 자동 생성됩니다"
+            />
+            
+            {/* 안내 메시지 */}
+            {emailAuto && formData.phone && formData.email && (
+              <p className="text-xs text-blue-600 -mt-2 mb-4">
+                💡 자동 생성됨: {formData.email}
+              </p>
+            )}
 
             <Input
               label="비밀번호 (선택사항)"

@@ -1,8 +1,10 @@
+// gymapp-frontend/src/pages/member/MyPtSessions.jsx
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import BottomNav from '../../components/BottomNav';
 import Card from '../../components/Card';
-import api, { getAuthData } from '../../services/api'; // ✅ 추가
+import api, { getAuthData } from '../../services/api';
 
 const MyPtSessions = () => {
   const navigate = useNavigate();
@@ -16,7 +18,6 @@ const MyPtSessions = () => {
 
   const fetchData = async () => {
     try {
-      // ✅ getAuthData 사용
       const { user } = getAuthData();
       
       if (!user) {
@@ -121,7 +122,11 @@ const MyPtSessions = () => {
         ) : (
           <div className="space-y-4">
             {sessions.map((session) => (
-              <Card key={session.id}>
+              <Card 
+                key={session.id}
+                onClick={() => navigate(`/my-pt-sessions/${session.id}`)} // ✨ 클릭 이벤트 추가
+                className="cursor-pointer hover:shadow-lg transition-shadow" // ✨ 커서 스타일 추가
+              >
                 <div className="flex justify-between items-start mb-3">
                   <h4 className="text-lg font-bold text-gray-800">
                     {formatDate(session.sessionDate)}
@@ -130,7 +135,7 @@ const MyPtSessions = () => {
                     {formatDuration(session.duration)}
                   </span>
                 </div>
-                <p className="text-gray-600 whitespace-pre-wrap">{session.content}</p>
+                <p className="text-gray-600 whitespace-pre-wrap line-clamp-2">{session.content}</p>
                 <p className="text-sm text-gray-400 mt-3">
                   트레이너: {session.trainerName}
                 </p>

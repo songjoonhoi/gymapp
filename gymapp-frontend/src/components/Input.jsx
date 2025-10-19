@@ -1,3 +1,5 @@
+// gymapp-frontend/src/components/Input.jsx
+
 import React, { useState, useEffect } from 'react';
 
 const Input = ({
@@ -10,11 +12,12 @@ const Input = ({
   required = false,
   placeholder,
   disabled = false,
-  autoFormat = false, // ✅ 자동 포맷 옵션
+  autoFormat = false,
   ...props
 }) => {
   const [displayValue, setDisplayValue] = useState(value || '');
 
+  // ✅ 추가: value가 외부에서 변경되면 displayValue도 업데이트
   useEffect(() => {
     setDisplayValue(value || '');
   }, [value]);
